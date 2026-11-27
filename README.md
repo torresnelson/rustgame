@@ -6,9 +6,10 @@ https://torresnelson.github.io/rustgame/
 
 - **Game of Life**: pick one of 13 classic patterns (or draw your own) and
   watch it evolve.
+- **Tetris**: the classic falling blocks, with a top-10 table of named
+  high scores.
 - **Sand Simulator**: pour sand and water, build stone walls. Every finger
   paints on its own, so one can paint while another picks a tool.
-- **Tetris**: being ported.
 
 They are a port of the Python/pygame versions in
 [torresnelson/pygame](https://github.com/torresnelson/pygame); the plan is in
@@ -20,6 +21,12 @@ They are a port of the Python/pygame versions in
   click loads it straight away). On the board the buttons run/pause, step,
   change speed, reset, clear and go back; tap cells while paused. Keys:
   up/down + enter, space, n, + -, r, c, esc.
+- Tetris: tap rotates, drag sideways moves, drag down soft drops, flick down
+  hard drops; PAUSE and END buttons. Held upright, thumb buttons `<` `ROT`
+  `>` `DOWN` `DROP` sit under the board (left, right and down repeat while
+  held). A high score asks for a name on an on-screen keyboard. Keys:
+  arrows, space, p, esc. Scores are kept in the browser's local storage, or
+  in `~/.local/share/pygame-sandbox/` on the desktop.
 - Sand Simulator: paint with a finger or the left mouse button, erase with
   the right one; the toolbar picks sand, water, stone or the eraser, the
   brush size, pause, clear and menu. Keys: 1-4, [ ], mouse wheel, space, c,
@@ -52,7 +59,7 @@ pinned toolchain (`rust-toolchain.toml`, with the `wasm32-unknown-unknown`
 target):
 
     nix-shell
-    cargo run -p game-of-life        # or sand-simulator
+    cargo run -p game-of-life        # or tetris, sand-simulator
     cargo test --workspace
 
 The first build compiles bevy and takes several minutes.

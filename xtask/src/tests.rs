@@ -76,7 +76,10 @@ fn landing_page_escapes_titles() {
 
 #[test]
 fn commands_build_bind_and_optimise() {
-    let game = &GAMES[1];
+    let game = GAMES
+        .iter()
+        .find(|game| game.path == "sandsimulator")
+        .unwrap();
     let build = build_command(game);
     assert_eq!(&build[..4], ["cargo", "build", "--profile", PROFILE]);
     assert_eq!(build.last().unwrap(), game.crate_name);

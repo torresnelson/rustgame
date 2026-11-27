@@ -38,11 +38,16 @@ struct Game {
     title: &'static str,
 }
 
-const GAMES: [Game; 2] = [
+const GAMES: [Game; 3] = [
     Game {
         path: "gameoflife",
         crate_name: "game-of-life",
         title: "Game of Life",
+    },
+    Game {
+        path: "tetris",
+        crate_name: "tetris",
+        title: "Tetris",
     },
     Game {
         path: "sandsimulator",
