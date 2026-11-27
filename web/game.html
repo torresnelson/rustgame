@@ -129,7 +129,8 @@
     const game = document.getElementById('bevy');
     game.addEventListener('webglcontextlost', () => add('webgl', ['context lost']));
     game.addEventListener('webglcontextrestored', () => add('webgl', ['context restored']));
-    add('check', ['purple around the game and an orange square in the middle mean bevy draws']);
+    add('check', ['purple: bevy clears; squares above the centre: orange = sprite (left), '
+                  + 'green = 2D mesh (right)']);
     setTimeout(() => {
       const canvas = document.getElementById('bevy');
       const box = canvas.getBoundingClientRect();

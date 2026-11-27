@@ -33,13 +33,18 @@ struct CanvasSprite;
 #[derive(Component)]
 struct ScanlineSprite;
 
-/// Render checks for `?debug` pages: a purple background around the game and
-/// an orange square over it. If they show while the game stays black, the
-/// canvas texture upload is failing; if nothing shows, nothing is presented.
+/// Render checks for `?debug` pages: a purple background, then one square per
+/// bevy pipeline, so a phone shows which of them reach the screen: orange is a
+/// sprite (instanced, like the game) and green a 2D mesh with a material.
 const DEBUG_BACKGROUND: Color = Color::srgb(0.35, 0.0, 0.45);
-const DEBUG_SQUARE: Color = Color::srgb(1.0, 0.55, 0.0);
+const DEBUG_SPRITE: Color = Color::srgb(1.0, 0.55, 0.0);
+const DEBUG_MESH: Color = Color::srgb(0.1, 0.85, 0.2);
+const DEBUG_SIZE: f32 = 60.0;
 
 pub(crate) fn plugin(app: &mut App) {
+    if crate::web::debug_mode() {
+        app.add_systems(Startup, debug_checks);
+    }
     app.add_systems(Startup, setup)
         .add_systems(PostUpdate, present);
 }
@@ -103,13 +108,23 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, canvas: Res<
         Transform::from_xyz(0.0, 0.0, 1.0),
     ));
     commands.insert_resource(handles);
-    if crate::web::debug_mode() {
-        commands.insert_resource(ClearColor(DEBUG_BACKGROUND));
-        commands.spawn((
-            Sprite::from_color(DEBUG_SQUARE, Vec2::splat(60.0)),
-            Transform::from_xyz(0.0, 0.0, 2.0),
-        ));
-    }
+}
+
+fn debug_checks(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    commands.insert_resource(ClearColor(DEBUG_BACKGROUND));
+    commands.spawn((
+        Sprite::from_color(DEBUG_SPRITE, Vec2::splat(DEBUG_SIZE)),
+        Transform::from_xyz(-DEBUG_SIZE * 1.5, DEBUG_SIZE * 3.0, 2.0),
+    ));
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::new(DEBUG_SIZE, DEBUG_SIZE))),
+        MeshMaterial2d(materials.add(DEBUG_MESH)),
+        Transform::from_xyz(DEBUG_SIZE * 1.5, DEBUG_SIZE * 3.0, 2.0),
+    ));
 }
 
 fn present(
