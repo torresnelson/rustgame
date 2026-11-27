@@ -45,6 +45,8 @@ fn game_page_has_the_canvas_loading_screen_and_phone_settings() {
     assert_eq!(html.matches("<meta name=\"viewport\"").count(), 1);
     assert!(html.contains("width=device-width"));
     assert!(html.contains("touch-action: none"));
+    // `?debug` shows the log on screen, for phones without developer tools.
+    assert!(html.contains(".has('debug')"));
 }
 
 #[test]
