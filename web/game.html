@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<!-- Page for one Rust/bevy game; tools/build_rust_web.py fills in {{TITLE}}
-     and {{NAME}} (the wasm-bindgen output name). -->
+<!-- Page for one game; `cargo xtask build-web` fills in the TITLE placeholder
+     and the NAME one (the wasm-bindgen output name). -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#000000">
 <title>{{TITLE}}</title>
@@ -48,7 +48,7 @@
   <div class="blocks" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <div class="bar" aria-hidden="true"><div class="fill" id="loading-fill"></div></div>
   <div id="loading-status">Loading</div>
-  <div class="hint" id="loading-hint">Rust version: the first visit downloads the game, so it takes a few seconds.</div>
+  <div class="hint" id="loading-hint">The first visit downloads the game, so it takes a few seconds.</div>
   <noscript><div class="hint">This game needs JavaScript.</div></noscript>
 </div>
 <canvas id="bevy" tabindex="0"></canvas>

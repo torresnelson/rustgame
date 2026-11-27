@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Landing page; `cargo xtask build-web` fills in the ITEMS placeholder (one box per game).
+     Same look as the pygame sandbox landing page. -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rustgame</title>
+<style>
+  body { margin: 0; min-height: 100vh; background: #000; color: #fcfcfc;
+         font: 16px/1.5 ui-monospace, "DejaVu Sans Mono", Menlo, monospace;
+         display: flex; flex-direction: column; align-items: center; justify-content: center;
+         padding: 48px 16px; box-sizing: border-box; }
+  /* As wide as the longest title, so every box matches it. */
+  ul { list-style: none; padding: 0; margin: 0; width: max-content; max-width: 100%; }
+  li a { display: block; margin: 0 0 16px; padding: 16px 32px; color: inherit;
+         text-decoration: none; border: 2px solid #fcfcfc; outline: 2px solid #0058f8;
+         outline-offset: -6px; text-transform: uppercase; text-align: center; }
+  li a:hover, li a:focus { background: #28285a; }
+  li strong { display: block; font-size: 20px; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+<ul>
+{{ITEMS}}
+</ul>
+</body>
+</html>
