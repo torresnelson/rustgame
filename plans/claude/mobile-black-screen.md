@@ -94,6 +94,34 @@ from a uniform array by instance index.
 | neither | H2 (depth) | Draw without the depth-tested 2D pass, or present without wgpu (below) |
 | both | Neither; the sprite failure is intermittent or order dependent | More checks: one sprite only, no scanlines |
 
+## Result of the deciding test (2026-11-27, 18:51)
+
+**Neither square shows** on the phone in Firefox: purple only. On the
+**same phone in Chrome, everything works.**
+
+- `[draws]`: `drawElementsInstanced` 954 in 239 frames is 4 per frame, the
+  game canvas, the scanlines, the sprite and the mesh. All four are issued
+  and accepted, and none produces pixels. The mesh is drawn instanced too
+  (bevy batches 2D meshes).
+- **H1 is ruled out.** The mesh has a per-vertex attribute 0 and takes its
+  corners from a vertex buffer, and it fails all the same.
+- **It is Firefox, not the GPU.** Firefox for Android passes WebGL to the
+  native GLES driver; Chrome goes through its own translation layer.
+
+Two causes remain. Both are shared by every draw in the 2D main pass, and
+by nothing that works (the clear and the copy to the canvas):
+
+- **H2, the depth test:** `GreaterEqual` against the `Depth32Float`
+  attachment, cleared to 0.0.
+- **H5, the view uniform:** every 2D draw reads `view.clip_from_world` from
+  a uniform buffer bound with a dynamic offset (`bindBufferRange`; this
+  device's alignment is 128). If that binding reads as zeros under
+  Firefox's GLES path, every vertex lands on one point. No pixels, no error.
+
+Telling H2 from H5 apart needs one more debug round. Either way, a fix
+inside bevy's 2D pass works around one Firefox and driver behaviour, in a
+renderer the games use only to scale one image. Option B avoids both.
+
 ## Options
 
 **A. Mesh2d display** (if H1). A few lines in `sandbox-ui/src/display.rs`:
