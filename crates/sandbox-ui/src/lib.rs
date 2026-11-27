@@ -44,10 +44,19 @@ pub fn game_window(title: &str, width: u32, height: u32) -> Window {
 /// A bevy app with the default plugins, the shared window and a black background.
 pub fn game_app(title: &str, width: u32, height: u32) -> App {
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(game_window(title, width, height)),
-        ..default()
-    }))
+    let mut log = bevy::log::LogPlugin::default();
+    if web::debug_mode() {
+        // `?debug` pages: renderer warnings too, for phones without dev tools.
+        log.filter = "info,wgpu=warn,wgpu_hal=warn,naga=warn,bevy_render=debug".to_owned();
+    }
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(game_window(title, width, height)),
+                ..default()
+            })
+            .set(log),
+    )
     .insert_resource(ClearColor(Color::BLACK));
     app
 }
