@@ -83,6 +83,10 @@
                          gl.getParameter(gl.RENDERER),
                          `max texture ${gl.getParameter(gl.MAX_TEXTURE_SIZE)}`].join(' | ')
                       : 'unavailable']);
+    const game = document.getElementById('bevy');
+    game.addEventListener('webglcontextlost', () => add('webgl', ['context lost']));
+    game.addEventListener('webglcontextrestored', () => add('webgl', ['context restored']));
+    add('check', ['purple around the game and an orange square in the middle mean bevy draws']);
     setTimeout(() => {
       const canvas = document.getElementById('bevy');
       const box = canvas.getBoundingClientRect();
