@@ -83,60 +83,10 @@
                          gl.getParameter(gl.RENDERER),
                          `max texture ${gl.getParameter(gl.MAX_TEXTURE_SIZE)}`].join(' | ')
                       : 'unavailable']);
-    if (gl) {
-      const limits = ['MAX_UNIFORM_BLOCK_SIZE', 'MAX_VERTEX_UNIFORM_BLOCKS',
-                      'MAX_FRAGMENT_UNIFORM_BLOCKS', 'MAX_VERTEX_UNIFORM_VECTORS',
-                      'MAX_FRAGMENT_UNIFORM_VECTORS', 'MAX_VERTEX_ATTRIBS',
-                      'MAX_TEXTURE_IMAGE_UNITS', 'UNIFORM_BUFFER_OFFSET_ALIGNMENT'];
-      add('limits', [limits.map(name => `${name.slice(4).toLowerCase()} ${gl.getParameter(gl[name])}`)
-                       .join(', ')]);
-      const high = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
-      add('limits', [`fragment highp float precision ${high ? high.precision : 'none'}`]);
-    }
-
-    // Catch what Firefox only reports in its own console: shaders the driver
-    // rejects, WebGL errors after draws, and how many draws happen at all.
-    const proto = WebGL2RenderingContext.prototype;
-    let reports = 0;
-    const report = text => { if (reports++ < 40) add('gl', [text]); };
-    const compile = proto.compileShader;
-    proto.compileShader = function (shader) {
-      compile.call(this, shader);
-      if (!this.getShaderParameter(shader, this.COMPILE_STATUS)) {
-        report(`shader failed: ${this.getShaderInfoLog(shader)}`);
-      }
-    };
-    const link = proto.linkProgram;
-    proto.linkProgram = function (program) {
-      link.call(this, program);
-      if (!this.getProgramParameter(program, this.LINK_STATUS)) {
-        report(`program failed: ${this.getProgramInfoLog(program)}`);
-      }
-    };
-    const draws = {};
-    for (const name of ['drawArrays', 'drawElements', 'drawArraysInstanced',
-                        'drawElementsInstanced', 'drawRangeElements']) {
-      const draw = proto[name];
-      draws[name] = 0;
-      proto[name] = function (...args) {
-        draw.apply(this, args);
-        if (draws[name]++ < 300) {
-          const error = this.getError();
-          if (error) report(`${name}(${args.join(', ')}) error 0x${error.toString(16)}`);
-        }
-      };
-    }
-    const game = document.getElementById('bevy');
-    game.addEventListener('webglcontextlost', () => add('webgl', ['context lost']));
-    game.addEventListener('webglcontextrestored', () => add('webgl', ['context restored']));
-    add('check', ['purple: bevy clears; squares above the centre: orange = sprite (left), '
-                  + 'green = 2D mesh (right)']);
     setTimeout(() => {
       const canvas = document.getElementById('bevy');
       const box = canvas.getBoundingClientRect();
-      add('canvas', [`css ${box.width}x${box.height}`, `backing ${canvas.width}x${canvas.height}`,
-                     `context ${canvas.getContext('webgl2') ? 'webgl2' : 'other'}`]);
-      add('draws', [Object.entries(draws).map(([name, count]) => `${name} ${count}`).join(', ')]);
+      add('canvas', [`css ${box.width}x${box.height}`, `backing ${canvas.width}x${canvas.height}`]);
     }, 6000);
   }
 
