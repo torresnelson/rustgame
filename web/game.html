@@ -53,6 +53,44 @@
 </div>
 <canvas id="bevy" tabindex="0"></canvas>
 <script>
+  // `?debug` in the URL: show the game's log, page errors and the browser's
+  // WebGL2 details on screen, for phones without developer tools.
+  if (new URLSearchParams(location.search).has('debug')) {
+    const log = document.createElement('pre');
+    log.id = 'debug-log';
+    log.style.cssText = 'position:fixed;left:0;right:0;bottom:0;max-height:50%;margin:0;'
+      + 'padding:6px;overflow:auto;z-index:20;background:rgba(0,0,0,0.85);color:#7cfc7c;'
+      + 'font:10px/1.3 monospace;white-space:pre-wrap;word-break:break-all;touch-action:pan-y;';
+    document.body.append(log);
+    const add = (kind, parts) => {
+      // Drop bevy's `%c` colour styles and long crate paths.
+      if (typeof parts[0] === 'string' && parts[0].includes('%c')) {
+        parts = [parts[0].replaceAll('%c', ''), ...parts.slice(1 + parts[0].split('%c').length - 1)];
+      }
+      const text = parts.map(String).join(' ').replace(/\S*\/src\//g, '');
+      log.textContent += `[${kind}] ${text}\n`;
+      log.scrollTop = log.scrollHeight;
+    };
+    for (const kind of ['log', 'info', 'warn', 'error']) {
+      const original = console[kind].bind(console);
+      console[kind] = (...parts) => { original(...parts); add(kind, parts); };
+    }
+    addEventListener('error', event => add('page error', [event.message]));
+    addEventListener('unhandledrejection', event => add('rejected', [event.reason]));
+    add('page', [navigator.userAgent, `dpr ${devicePixelRatio}`, `${innerWidth}x${innerHeight}`]);
+    const gl = document.createElement('canvas').getContext('webgl2');
+    add('webgl2', [gl ? [gl.getParameter(gl.VERSION), gl.getParameter(gl.VENDOR),
+                         gl.getParameter(gl.RENDERER),
+                         `max texture ${gl.getParameter(gl.MAX_TEXTURE_SIZE)}`].join(' | ')
+                      : 'unavailable']);
+    setTimeout(() => {
+      const canvas = document.getElementById('bevy');
+      const box = canvas.getBoundingClientRect();
+      add('canvas', [`css ${box.width}x${box.height}`, `backing ${canvas.width}x${canvas.height}`,
+                     `context ${canvas.getContext('webgl2') ? 'webgl2' : 'other'}`]);
+    }, 6000);
+  }
+
   // Keep gestures on the game: no double-tap or pinch zoom (Firefox for Android).
   (() => {
     let lastTouchEnd = 0;
