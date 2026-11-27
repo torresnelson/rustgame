@@ -1,7 +1,12 @@
 
 # Black screen on phones: analysis
 
-Status: root cause narrowed to one pipeline stage, not yet confirmed.
+Status: **fixed** by option B (PR #7, `deed678`). In the browser the games
+are drawn with the page canvas's 2D context, and bevy's renderer is not
+started. Confirmed working by the owner on the phone in Firefox for
+Android, and in headless Firefox with no WebGL at all. The exact cause
+inside bevy's 2D pass (H2 or H5 below) was not pinned down; the fix does
+not depend on it.
 Bevy 0.20.1, wgpu 30 (GL backend on WebGL2), rustgame `main` at `b172e03`.
 
 ## Symptom
