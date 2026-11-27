@@ -1,12 +1,15 @@
-//! Shows the `PixelCanvas` on screen: uploaded to a texture each frame, scaled
-//! with hard pixel edges, letterboxed to fit the window, and optionally
-//! overlaid with scanlines (the tetris look).
+//! Shows the `PixelCanvas` on screen, scaled with hard pixel edges,
+//! letterboxed to fit the window, and optionally overlaid with scanlines (the
+//! tetris look).
+//!
+//! On the desktop the canvas is uploaded to a texture each frame and drawn by
+//! bevy's renderer ([`gpu`]). In the browser it is drawn with the page
+//! canvas's 2D context instead (`web_display`): on Firefox for Android,
+//! bevy's WebGL2 draws silently produced nothing (see
+//! `plans/claude/mobile-black-screen.md`), and one scaled image needs no GPU
+//! pipeline.
 
-use bevy::asset::RenderAssetUsages;
-use bevy::image::ImageSampler;
 use bevy::prelude::*;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use bevy::window::PrimaryWindow;
 
 use crate::canvas::Canvas;
 
@@ -21,52 +24,8 @@ pub struct PixelCanvas {
     pub scanlines: bool,
 }
 
-#[derive(Resource)]
-struct DisplayImages {
-    canvas: Handle<Image>,
-    scanlines: Handle<Image>,
-}
-
-#[derive(Component)]
-struct CanvasSprite;
-
-#[derive(Component)]
-struct ScanlineSprite;
-
-/// Render checks for `?debug` pages: a purple background, then one square per
-/// bevy pipeline, so a phone shows which of them reach the screen: orange is a
-/// sprite (instanced, like the game) and green a 2D mesh with a material.
-const DEBUG_BACKGROUND: Color = Color::srgb(0.35, 0.0, 0.45);
-const DEBUG_SPRITE: Color = Color::srgb(1.0, 0.55, 0.0);
-const DEBUG_MESH: Color = Color::srgb(0.1, 0.85, 0.2);
-const DEBUG_SIZE: f32 = 60.0;
-
-pub(crate) fn plugin(app: &mut App) {
-    if crate::web::debug_mode() {
-        app.add_systems(Startup, debug_checks);
-    }
-    app.add_systems(Startup, setup)
-        .add_systems(PostUpdate, present);
-}
-
-fn canvas_image(canvas: &Canvas) -> Image {
-    let (width, height) = canvas.size();
-    let mut image = Image::new(
-        Extent3d {
-            width: width as u32,
-            height: height as u32,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        canvas.pixels().to_vec(),
-        TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
-    );
-    image.sampler = ImageSampler::nearest();
-    image
-}
-
 /// Two screen rows per canvas row: clear, then a translucent black line.
+/// RGBA pixels of a 1 x (2 * `canvas_height`) image.
 pub fn scanline_pixels(canvas_height: i32) -> Vec<u8> {
     (0..canvas_height * 2)
         .flat_map(|row| {
@@ -79,102 +38,131 @@ pub fn scanline_pixels(canvas_height: i32) -> Vec<u8> {
         .collect()
 }
 
-fn scanline_image(canvas_height: i32) -> Image {
-    let mut image = Image::new(
-        Extent3d {
-            width: 1,
-            height: (canvas_height * 2) as u32,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        scanline_pixels(canvas_height),
-        TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
-    );
-    image.sampler = ImageSampler::nearest();
-    image
+pub(crate) fn plugin(app: &mut App) {
+    #[cfg(target_arch = "wasm32")]
+    app.add_plugins(crate::web_display::plugin);
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_plugins(gpu::plugin);
 }
 
-fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, canvas: Res<PixelCanvas>) {
-    let handles = DisplayImages {
-        canvas: images.add(canvas_image(&canvas.canvas)),
-        scanlines: images.add(scanline_image(canvas.canvas.height())),
-    };
-    commands.spawn((Camera2d, Msaa::Off));
-    commands.spawn((CanvasSprite, Sprite::from_image(handles.canvas.clone())));
-    commands.spawn((
-        ScanlineSprite,
-        Sprite::from_image(handles.scanlines.clone()),
-        Transform::from_xyz(0.0, 0.0, 1.0),
-    ));
-    commands.insert_resource(handles);
-}
+/// The desktop display: one texture and two sprites drawn by bevy.
+#[cfg(not(target_arch = "wasm32"))]
+mod gpu {
+    use bevy::asset::RenderAssetUsages;
+    use bevy::image::ImageSampler;
+    use bevy::prelude::*;
+    use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+    use bevy::window::PrimaryWindow;
 
-fn debug_checks(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    commands.insert_resource(ClearColor(DEBUG_BACKGROUND));
-    commands.spawn((
-        Sprite::from_color(DEBUG_SPRITE, Vec2::splat(DEBUG_SIZE)),
-        Transform::from_xyz(-DEBUG_SIZE * 1.5, DEBUG_SIZE * 3.0, 2.0),
-    ));
-    commands.spawn((
-        Mesh2d(meshes.add(Rectangle::new(DEBUG_SIZE, DEBUG_SIZE))),
-        MeshMaterial2d(materials.add(DEBUG_MESH)),
-        Transform::from_xyz(DEBUG_SIZE * 1.5, DEBUG_SIZE * 3.0, 2.0),
-    ));
-}
+    use super::{PixelCanvas, scanline_pixels};
+    use crate::canvas::Canvas;
 
-fn present(
-    canvas: Res<PixelCanvas>,
-    mut handles: ResMut<DisplayImages>,
-    mut images: ResMut<Assets<Image>>,
-    window: Single<&Window, With<PrimaryWindow>>,
-    mut canvas_sprite: Single<&mut Sprite, (With<CanvasSprite>, Without<ScanlineSprite>)>,
-    mut scanline_sprite: Single<(&mut Sprite, &mut Visibility), With<ScanlineSprite>>,
-) {
-    let (width, height) = canvas.canvas.size();
-    let (sprite, visibility) = &mut *scanline_sprite;
-    if canvas.is_changed() {
-        let same_size = images
-            .get(&handles.canvas)
-            .is_some_and(|image| image.size() == UVec2::new(width as u32, height as u32));
-        if same_size {
-            if let Some(mut image) = images.get_mut(&handles.canvas) {
-                image.data = Some(canvas.canvas.pixels().to_vec());
+    #[derive(Resource)]
+    struct DisplayImages {
+        canvas: Handle<Image>,
+        scanlines: Handle<Image>,
+    }
+
+    #[derive(Component)]
+    struct CanvasSprite;
+
+    #[derive(Component)]
+    struct ScanlineSprite;
+
+    pub(super) fn plugin(app: &mut App) {
+        app.add_systems(Startup, setup)
+            .add_systems(PostUpdate, present);
+    }
+
+    fn texture(width: i32, height: i32, pixels: Vec<u8>) -> Image {
+        let mut image = Image::new(
+            Extent3d {
+                width: width as u32,
+                height: height as u32,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            pixels,
+            TextureFormat::Rgba8UnormSrgb,
+            RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+        );
+        image.sampler = ImageSampler::nearest();
+        image
+    }
+
+    pub(super) fn canvas_image(canvas: &Canvas) -> Image {
+        let (width, height) = canvas.size();
+        texture(width, height, canvas.pixels().to_vec())
+    }
+
+    fn scanline_image(canvas_height: i32) -> Image {
+        texture(1, canvas_height * 2, scanline_pixels(canvas_height))
+    }
+
+    fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, canvas: Res<PixelCanvas>) {
+        let handles = DisplayImages {
+            canvas: images.add(canvas_image(&canvas.canvas)),
+            scanlines: images.add(scanline_image(canvas.canvas.height())),
+        };
+        commands.spawn((Camera2d, Msaa::Off));
+        commands.spawn((CanvasSprite, Sprite::from_image(handles.canvas.clone())));
+        commands.spawn((
+            ScanlineSprite,
+            Sprite::from_image(handles.scanlines.clone()),
+            Transform::from_xyz(0.0, 0.0, 1.0),
+        ));
+        commands.insert_resource(handles);
+    }
+
+    fn present(
+        canvas: Res<PixelCanvas>,
+        mut handles: ResMut<DisplayImages>,
+        mut images: ResMut<Assets<Image>>,
+        window: Single<&Window, With<PrimaryWindow>>,
+        mut canvas_sprite: Single<&mut Sprite, (With<CanvasSprite>, Without<ScanlineSprite>)>,
+        mut scanline_sprite: Single<(&mut Sprite, &mut Visibility), With<ScanlineSprite>>,
+    ) {
+        let (width, height) = canvas.canvas.size();
+        let (sprite, visibility) = &mut *scanline_sprite;
+        if canvas.is_changed() {
+            let same_size = images
+                .get(&handles.canvas)
+                .is_some_and(|image| image.size() == UVec2::new(width as u32, height as u32));
+            if same_size {
+                if let Some(mut image) = images.get_mut(&handles.canvas) {
+                    image.data = Some(canvas.canvas.pixels().to_vec());
+                }
+            } else {
+                // A new size (e.g. the phone was turned): new textures, old ones dropped.
+                let old = std::mem::replace(
+                    &mut *handles,
+                    DisplayImages {
+                        canvas: images.add(canvas_image(&canvas.canvas)),
+                        scanlines: images.add(scanline_image(height)),
+                    },
+                );
+                images.remove(&old.canvas);
+                images.remove(&old.scanlines);
+                canvas_sprite.image = handles.canvas.clone();
+                sprite.image = handles.scanlines.clone();
             }
-        } else {
-            // A new size (e.g. the phone was turned): new textures, old ones dropped.
-            let old = std::mem::replace(
-                &mut *handles,
-                DisplayImages {
-                    canvas: images.add(canvas_image(&canvas.canvas)),
-                    scanlines: images.add(scanline_image(height)),
-                },
-            );
-            images.remove(&old.canvas);
-            images.remove(&old.scanlines);
-            canvas_sprite.image = handles.canvas.clone();
-            sprite.image = handles.scanlines.clone();
         }
-    }
 
-    let size = window.size();
-    let (_, _, box_w, box_h) = touch::fit_box(size.x, size.y, width as f32, height as f32);
-    let fitted = Some(Vec2::new(box_w, box_h));
-    if canvas_sprite.custom_size != fitted {
-        canvas_sprite.custom_size = fitted;
+        let size = window.size();
+        let (_, _, box_w, box_h) = touch::fit_box(size.x, size.y, width as f32, height as f32);
+        let fitted = Some(Vec2::new(box_w, box_h));
+        if canvas_sprite.custom_size != fitted {
+            canvas_sprite.custom_size = fitted;
+        }
+        if sprite.custom_size != fitted {
+            sprite.custom_size = fitted;
+        }
+        visibility.set_if_neq(if canvas.scanlines {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        });
     }
-    if sprite.custom_size != fitted {
-        sprite.custom_size = fitted;
-    }
-    visibility.set_if_neq(if canvas.scanlines {
-        Visibility::Visible
-    } else {
-        Visibility::Hidden
-    });
 }
 
 #[cfg(test)]
@@ -190,7 +178,7 @@ mod tests {
 
     #[test]
     fn canvas_image_matches_the_canvas() {
-        let image = canvas_image(&Canvas::new(4, 3));
+        let image = gpu::canvas_image(&Canvas::new(4, 3));
         assert_eq!(image.size(), UVec2::new(4, 3));
         assert_eq!(image.data.as_deref(), Some(Canvas::new(4, 3).pixels()));
     }

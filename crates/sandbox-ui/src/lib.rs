@@ -13,6 +13,8 @@ pub mod orientation;
 pub mod pointer;
 pub mod storage;
 pub mod web;
+#[cfg(target_arch = "wasm32")]
+mod web_display;
 
 pub use canvas::{BLACK, Canvas, Rgb};
 pub use display::PixelCanvas;
@@ -42,22 +44,27 @@ pub fn game_window(title: &str, width: u32, height: u32) -> Window {
 }
 
 /// A bevy app with the default plugins, the shared window and a black background.
+///
+/// In the browser bevy's renderer is not started: the games are shown with
+/// the page canvas's 2D context instead (see `display`).
 pub fn game_app(title: &str, width: u32, height: u32) -> App {
     let mut app = App::new();
-    let mut log = bevy::log::LogPlugin::default();
-    if web::debug_mode() {
-        // `?debug` pages: renderer warnings too, for phones without dev tools.
-        log.filter = "info,wgpu=warn,wgpu_hal=warn,naga=warn,bevy_render=debug".to_owned();
-    }
-    app.add_plugins(
-        DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(game_window(title, width, height)),
+    let plugins = DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(game_window(title, width, height)),
+        ..default()
+    });
+    #[cfg(target_arch = "wasm32")]
+    let plugins = plugins.set(bevy::render::RenderPlugin {
+        render_creation: bevy::render::settings::RenderCreation::Automatic(Box::new(
+            bevy::render::settings::WgpuSettings {
+                backends: None,
                 ..default()
-            })
-            .set(log),
-    )
-    .insert_resource(ClearColor(Color::BLACK));
+            },
+        )),
+        ..default()
+    });
+    app.add_plugins(plugins)
+        .insert_resource(ClearColor(Color::BLACK));
     app
 }
 
