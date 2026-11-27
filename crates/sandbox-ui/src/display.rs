@@ -33,6 +33,12 @@ struct CanvasSprite;
 #[derive(Component)]
 struct ScanlineSprite;
 
+/// Render checks for `?debug` pages: a purple background around the game and
+/// an orange square over it. If they show while the game stays black, the
+/// canvas texture upload is failing; if nothing shows, nothing is presented.
+const DEBUG_BACKGROUND: Color = Color::srgb(0.35, 0.0, 0.45);
+const DEBUG_SQUARE: Color = Color::srgb(1.0, 0.55, 0.0);
+
 pub(crate) fn plugin(app: &mut App) {
     app.add_systems(Startup, setup)
         .add_systems(PostUpdate, present);
@@ -97,6 +103,13 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, canvas: Res<
         Transform::from_xyz(0.0, 0.0, 1.0),
     ));
     commands.insert_resource(handles);
+    if crate::web::debug_mode() {
+        commands.insert_resource(ClearColor(DEBUG_BACKGROUND));
+        commands.spawn((
+            Sprite::from_color(DEBUG_SQUARE, Vec2::splat(60.0)),
+            Transform::from_xyz(0.0, 0.0, 2.0),
+        ));
+    }
 }
 
 fn present(

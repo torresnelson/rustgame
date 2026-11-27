@@ -21,6 +21,21 @@ pub fn canvas_css_size() -> Option<(f32, f32)> {
     None
 }
 
+/// Whether the page was opened with `?debug`: the web template then shows the
+/// log on screen, and the display adds render checks. Always false on desktop.
+pub fn debug_mode() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        web_sys::window()
+            .and_then(|window| window.location().search().ok())
+            .is_some_and(|search| search.contains("debug"))
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        false
+    }
+}
+
 /// Remove the page's loading screen (`window.hide_loading()`, defined by the
 /// web template) once the game draws its first frame.
 pub fn hide_loading() {
