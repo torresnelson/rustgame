@@ -1,0 +1,13 @@
+[package]
+name = "mines-core"
+description = "Minesweeper rules: mines, numbers, flags and flood reveal."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+fastrand.workspace = true
+
+[lints]
+workspace = true

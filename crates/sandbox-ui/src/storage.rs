@@ -11,6 +11,33 @@ pub fn save_text(key: &str, value: &str) -> Result<(), String> {
     platform::save_text(key, value)
 }
 
+/// A best score saved as plain text; missing or unreadable is 0.
+pub fn parse_best(text: Option<&str>) -> u32 {
+    text.and_then(|text| text.trim().parse().ok()).unwrap_or(0)
+}
+
+/// The best score saved under `key`.
+pub fn load_best(key: &str) -> u32 {
+    parse_best(load_text(key).as_deref())
+}
+
+/// Save a best score under `key`; failures are reported, not fatal.
+pub fn save_best(key: &str, best: u32) -> Result<(), String> {
+    save_text(key, &format!("{best}\n"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_best_falls_back_to_zero() {
+        assert_eq!(parse_best(None), 0);
+        assert_eq!(parse_best(Some("42\n")), 42);
+        assert_eq!(parse_best(Some("lots")), 0);
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 mod platform {
     use std::path::{Path, PathBuf};

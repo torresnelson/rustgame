@@ -11,6 +11,10 @@
 //! site/tetris/             Tetris
 //! site/sandsimulator/      Sand Simulator
 //! site/pong/               Pong
+//! site/snake/              Snake
+//! site/minesweeper/        Minesweeper
+//! site/merge/              Merge
+//! site/bricks/             Bricks
 //! ```
 
 use std::fs;
@@ -40,7 +44,7 @@ struct Game {
     title: &'static str,
 }
 
-const GAMES: [Game; 4] = [
+const GAMES: [Game; 8] = [
     Game {
         path: "gameoflife",
         crate_name: "game-of-life",
@@ -60,6 +64,26 @@ const GAMES: [Game; 4] = [
         path: "pong",
         crate_name: "pong",
         title: "Pong",
+    },
+    Game {
+        path: "snake",
+        crate_name: "snake",
+        title: "Snake",
+    },
+    Game {
+        path: "minesweeper",
+        crate_name: "minesweeper",
+        title: "Minesweeper",
+    },
+    Game {
+        path: "merge",
+        crate_name: "merge",
+        title: "Merge",
+    },
+    Game {
+        path: "bricks",
+        crate_name: "bricks",
+        title: "Bricks",
     },
 ];
 

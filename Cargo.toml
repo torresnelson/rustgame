@@ -16,6 +16,10 @@ life = { path = "crates/life" }
 tetris-core = { path = "crates/tetris-core" }
 pong-core = { path = "crates/pong-core" }
 sand = { path = "crates/sand" }
+snake-core = { path = "crates/snake-core" }
+mines-core = { path = "crates/mines-core" }
+merge-core = { path = "crates/merge-core" }
+bricks-core = { path = "crates/bricks-core" }
 fastrand = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
