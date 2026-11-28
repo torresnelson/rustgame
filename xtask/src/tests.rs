@@ -98,6 +98,40 @@ fn commands_build_bind_and_optimise() {
     assert!(optimise.contains(&"--enable-reference-types".to_owned()));
 }
 
+fn args(list: &[&str]) -> Vec<String> {
+    list.iter().map(|&arg| arg.to_owned()).collect()
+}
+
+#[test]
+fn parse_args_defaults_to_every_game_in_the_root_site() {
+    let (site, games) = parse_args(&[], Path::new("/w"), Path::new("/w/xtask")).unwrap();
+    assert_eq!(site, Path::new("/w/site"));
+    assert_eq!(games.len(), GAMES.len());
+}
+
+#[test]
+fn parse_args_picks_games_and_resolves_the_site_from_the_caller() {
+    let (site, games) = parse_args(
+        &args(&["tetris", "--site", "out"]),
+        Path::new("/w"),
+        Path::new("/home/me"),
+    )
+    .unwrap();
+    assert_eq!(site, Path::new("/home/me/out"));
+    assert_eq!(games, [&GAMES[1]]);
+    let (site, _) =
+        parse_args(&args(&["--site", "/abs"]), Path::new("/w"), Path::new("/x")).unwrap();
+    assert_eq!(site, Path::new("/abs"));
+}
+
+#[test]
+fn parse_args_rejects_unknown_games_and_a_missing_folder() {
+    let root = Path::new("/w");
+    let unknown = parse_args(&args(&["pong"]), root, root).unwrap_err();
+    assert!(unknown.contains("unknown game pong"), "{unknown}");
+    assert!(parse_args(&args(&["--site"]), root, root).is_err());
+}
+
 /// Emoji and pictographic symbols (arrows, shapes, dingbats, emoji ranges,
 /// variation selectors, zero-width joiner); same rule as the pygame repo.
 fn is_emoji(char: char) -> bool {
