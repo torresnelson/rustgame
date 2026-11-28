@@ -16,10 +16,12 @@ const PULL: Held = Held {
     plunger: true,
 };
 
-/// A field with the ball in play at `pos`, moving at `vel`.
+/// A field with the ball in play at `pos`, moving at `vel`, its ball save
+/// used up.
 fn in_play(pos: (f32, f32), vel: (f32, f32)) -> Field {
     let mut field = Field::new();
     field.in_lane = false;
+    field.save = 0;
     field.ball = Ball {
         pos: pos.into(),
         vel: vel.into(),
@@ -309,7 +311,7 @@ fn launching_hitting_and_draining_make_their_sounds() {
 
 #[test]
 fn only_hard_wall_hits_knock() {
-    let mut field = in_play((20.0, 200.0), (-12.0, 0.0));
+    let mut field = in_play((20.0, 150.0), (-12.0, 0.0));
     run(&mut field, NONE, 4, |_| false);
     assert_eq!(field.take_sounds(), [Sound::Knock]);
 
@@ -320,4 +322,128 @@ fn only_hard_wall_hits_knock() {
     let mut field = Field::new();
     run(&mut field, NONE, 30, |_| false);
     assert!(field.take_sounds().is_empty());
+}
+
+#[test]
+fn the_ball_is_heavy_and_slow() {
+    // Dropped from the top, it takes over a second to fall to the
+    // slingshots (half that with the old gravity of 0.2).
+    let mut field = in_play((150.0, 70.0), (0.0, 0.0));
+    field.shuttle.x = SHUTTLE_RANGE.0; // out of the way
+    let steps = run(&mut field, NONE, 600, |f| f.ball.pos.y > 300.0).len();
+    assert!(steps > 60, "{steps} steps");
+}
+
+#[test]
+fn the_shuttle_slides_end_to_end_and_back() {
+    let mut field = in_play((20.0, 300.0), (0.0, 0.0));
+    let (mut lowest, mut highest) = (f32::MAX, f32::MIN);
+    for _ in 0..400 {
+        field.ball = Ball {
+            pos: Vec2::new(20.0, 300.0),
+            vel: Vec2::default(),
+        };
+        field.step(NONE);
+        lowest = lowest.min(field.shuttle.x);
+        highest = highest.max(field.shuttle.x);
+        assert_eq!(field.shuttle.y, SHUTTLE_Y);
+    }
+    assert_eq!((lowest, highest), SHUTTLE_RANGE);
+}
+
+#[test]
+fn the_shuttle_kicks_the_ball_and_scores() {
+    let mut field = in_play((138.0, SHUTTLE_Y - 30.0), (0.0, 2.0));
+    field.shuttle.x = 138.0;
+    run(&mut field, NONE, 30, |f| f.score > 0);
+    assert_eq!(field.score, SHUTTLE_POINTS);
+    assert!(field.shuttle_flash > 0);
+    assert!(
+        field.ball.vel.y < -SHUTTLE_KICK * 0.8,
+        "{:?}",
+        field.ball.vel
+    );
+    assert!(field.take_sounds().contains(&Sound::Shuttle));
+}
+
+/// A ball thrown at the middle of target `i`.
+fn at_target(i: usize, speed: f32) -> Field {
+    let (top, bottom) = TARGETS[i];
+    in_play((30.0, (top + bottom) / 2.0), (-speed, 0.0))
+}
+
+#[test]
+fn a_hit_knocks_a_target_down_and_a_roll_does_not() {
+    let mut field = at_target(1, 5.0);
+    run(&mut field, NONE, 20, |f| f.score > 0);
+    assert_eq!(field.targets_down, [false, true, false]);
+    assert_eq!(field.score, TARGET_POINTS);
+    assert!(field.ball.vel.x > 0.0, "bounced back");
+    assert!(field.take_sounds().contains(&Sound::Target));
+
+    // Rolling down the wall past them.
+    let mut field = in_play((BALL_RADIUS + 0.5, 150.0), (-0.3, 0.0));
+    run(&mut field, NONE, 120, |f| f.ball.pos.y > 280.0);
+    assert!(field.ball.pos.y > 280.0, "{:?}", field.ball);
+    assert_eq!(field.targets_down, [false; 3]);
+}
+
+#[test]
+fn the_last_target_scores_the_bank_and_raises_them_all() {
+    let mut field = at_target(2, 5.0);
+    field.targets_down = [true, true, false];
+    field.multiplier = 2;
+    let events = run(&mut field, NONE, 20, |f| f.score > 0);
+    assert!(events.contains(&Event::Targets));
+    assert_eq!(field.targets_down, [false; 3]);
+    assert_eq!(field.score, 2 * (TARGET_POINTS + TARGETS_BONUS));
+    let sounds = field.take_sounds();
+    let target = sounds.iter().position(|&s| s == Sound::Target);
+    let bank = sounds.iter().position(|&s| s == Sound::Targets);
+    assert!(target.is_some() && target < bank, "{sounds:?}");
+}
+
+#[test]
+fn a_new_ball_is_saved_once() {
+    let mut field = Field::new();
+    run(&mut field, PULL, 60, |_| false);
+    run(&mut field, NONE, 200, |f| !f.in_lane);
+    run(&mut field, NONE, 5, |_| false);
+    let left = field.save;
+    assert!(0 < left && left < SAVE_STEPS, "counting down: {left}");
+
+    field.multiplier = 3;
+    field.ball = Ball {
+        pos: Vec2::new(138.0, 470.0),
+        vel: Vec2::new(0.0, 3.0),
+    };
+    let events = run(&mut field, NONE, 30, |f| f.ball_ready());
+    assert!(events.contains(&Event::Saved));
+    assert_eq!((field.balls, field.multiplier), (START_BALLS, 3));
+    assert!(field.take_sounds().contains(&Sound::Saved));
+
+    // Saved once: the next drain loses the ball, and the new one is
+    // saved again.
+    field.in_lane = false;
+    field.ball = Ball {
+        pos: Vec2::new(138.0, 470.0),
+        vel: Vec2::new(0.0, 3.0),
+    };
+    let events = run(&mut field, NONE, 30, |f| f.ball_ready());
+    assert!(events.contains(&Event::Drained));
+    assert_eq!(field.balls, START_BALLS - 1);
+    assert_eq!(field.save, SAVE_STEPS);
+}
+
+#[test]
+fn the_save_runs_out() {
+    let mut field = Field::new();
+    field.in_lane = false;
+    field.ball.pos = Vec2::new(20.0, 300.0);
+    for _ in 0..SAVE_STEPS {
+        field.ball.vel = Vec2::default();
+        field.ball.pos = Vec2::new(20.0, 300.0);
+        field.step(NONE);
+    }
+    assert_eq!(field.save, 0);
 }

@@ -19,9 +19,11 @@ https://torresnelson.github.io/rustgame/
   2048.
 - **Bricks**: a paddle, a ball and four levels of bricks, faster every
   round.
-- **Pinball**: two flippers, a plunger, pop bumpers, slingshots and three
-  rollover lanes that raise the bonus multiplier; three balls a game, with
-  8-bit sound effects made in code (`crates/sfx`).
+- **Pinball**: a heavy ball, two flippers, a plunger, pop bumpers, a
+  shuttling bumper, slingshots, a bank of drop targets and three rollover
+  lanes that raise the bonus multiplier; three balls a game, each saved
+  once if it drains in its first ten seconds, with 8-bit sound effects
+  made in code (`crates/sfx`).
 
 Game of Life, Tetris and Sand Simulator are ports of the Python/pygame
 versions in [torresnelson/pygame](https://github.com/torresnelson/pygame)
@@ -95,7 +97,7 @@ crates/snake-core    snake rules
 crates/mines-core    minesweeper rules: safe first opening, flood, chords
 crates/merge-core    sliding and merging tiles
 crates/bricks-core   paddle, ball and brick physics, levels
-crates/pinball-core  pinball physics: flippers, plunger, bumpers, lanes
+crates/pinball-core  pinball physics: flippers, plunger, bumpers, targets, lanes
 crates/sfx           8-bit sound effects synthesised in code
 crates/sandbox-ui    shared bevy layer: pixel canvas, pointers, orientation,
                      saves, 8-bit widgets, sound playback
