@@ -257,3 +257,70 @@ fn every_screen_draws_in_both_layouts() {
         assert_eq!(game.phase, Phase::Over);
     }
 }
+
+#[test]
+fn every_sound_the_game_plays_exists_and_is_audible() {
+    let sounds = crate::sounds::sounds();
+    let names: Vec<&str> = sounds.iter().map(|(name, _)| *name).collect();
+    let table = [
+        Sound::Flipper,
+        Sound::Launch,
+        Sound::Bumper,
+        Sound::Sling,
+        Sound::Lane,
+        Sound::Bonus,
+        Sound::Knock,
+        Sound::Drain,
+    ];
+    let played = table.map(sound_name);
+    for name in played.iter().chain(&["start", "over"]) {
+        assert!(names.contains(name), "no sound called {name}");
+    }
+    for (i, (name, samples)) in sounds.iter().enumerate() {
+        assert!(!names[i + 1..].contains(name), "{name} twice");
+        assert!(samples.iter().all(|s| s.abs() <= 1.0), "{name} clips");
+        assert!(samples.iter().any(|s| s.abs() > 0.1), "{name} is silent");
+        assert!(
+            samples.len() < sfx::SAMPLE_RATE as usize,
+            "{name} is too long"
+        );
+    }
+}
+
+#[test]
+fn starting_flipping_and_losing_make_their_sounds() {
+    let mut game = playing();
+    assert_eq!(game.take_sounds(), ["start"]);
+    for _ in 0..3 {
+        game.step(Held {
+            left: true,
+            ..NOTHING
+        });
+    }
+    assert_eq!(game.take_sounds(), ["flipper"], "once, not while held");
+
+    game.field.balls = 1;
+    drain(&mut game);
+    let sounds = game.take_sounds();
+    assert!(
+        sounds.contains(&"over") && !sounds.contains(&"drain"),
+        "{sounds:?}"
+    );
+}
+
+#[test]
+fn the_sound_key_turns_sound_off_and_on() {
+    let layout = landscape();
+    let mut game = playing();
+    game.take_sounds();
+    key(&mut game, Key::Sound);
+    assert!(!game.sound_on);
+    let mut quiet = Canvas::new(layout.size.0, layout.size.1);
+    game.draw(&mut quiet, &layout);
+    key(&mut game, Key::Sound);
+    assert!(game.sound_on);
+    assert_eq!(game.take_sounds(), ["lane"], "a chime says it is back");
+    let mut loud = Canvas::new(layout.size.0, layout.size.1);
+    game.draw(&mut loud, &layout);
+    assert_ne!(quiet, loud, "SOUND OFF is shown while off");
+}

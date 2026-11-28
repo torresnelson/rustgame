@@ -110,6 +110,21 @@
     }
   })();
 
+  // Sound: browsers only allow it after a tap or key press (iOS only inside
+  // the handler), so the context games play into (sandbox_ui::audio) is made,
+  // or woken up, here.
+  (() => {
+    const start = () => {
+      const Context = window.AudioContext || window.webkitAudioContext;
+      if (!Context) return;
+      if (!window.gameAudio) window.gameAudio = new Context();
+      if (window.gameAudio.state === 'suspended') window.gameAudio.resume();
+    };
+    for (const name of ['pointerdown', 'touchend', 'keydown']) {
+      document.addEventListener(name, start, { capture: true });
+    }
+  })();
+
   // Called by the game (sandbox-ui) on its first frame.
   window.hide_loading = () => {
     const screen = document.getElementById('loading');

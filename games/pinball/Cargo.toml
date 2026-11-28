@@ -11,6 +11,7 @@ bevy.workspace = true
 pinball-core.workspace = true
 pixelfont.workspace = true
 sandbox-ui.workspace = true
+sfx.workspace = true
 touch.workspace = true
 
 [lints]

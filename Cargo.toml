@@ -21,6 +21,7 @@ mines-core = { path = "crates/mines-core" }
 merge-core = { path = "crates/merge-core" }
 bricks-core = { path = "crates/bricks-core" }
 pinball-core = { path = "crates/pinball-core" }
+sfx = { path = "crates/sfx" }
 fastrand = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

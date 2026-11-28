@@ -229,6 +229,25 @@ pub struct Held {
     pub plunger: bool,
 }
 
+/// Something worth a sound effect, in the order it happened.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Sound {
+    /// A flipper went up.
+    Flipper,
+    Launch,
+    Bumper,
+    Sling,
+    Lane,
+    /// All three lanes lit.
+    Bonus,
+    /// The ball hit a wall hard (at most once a step).
+    Knock,
+    Drain,
+}
+
+/// Wall hits at least this fast (px/step, into the wall) knock.
+pub const KNOCK_SPEED: f32 = 4.0;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Event {
     Nothing,
@@ -257,8 +276,12 @@ pub struct Field {
     /// Steps each bumper and slingshot stays lit.
     pub bumper_flash: [u32; 3],
     pub sling_flash: [u32; 2],
+    /// Sounds since the game last took them ([`Field::take_sounds`]).
+    pub sounds: Vec<Sound>,
     /// The lane the ball is passing through, so each pass counts once.
     lane_inside: Option<usize>,
+    /// The hardest wall hit this step.
+    knock: f32,
 }
 
 impl Default for Field {
@@ -280,8 +303,15 @@ impl Field {
             balls: START_BALLS,
             bumper_flash: [0; 3],
             sling_flash: [0; 2],
+            sounds: Vec::new(),
             lane_inside: None,
+            knock: 0.0,
         }
+    }
+
+    /// The sounds since the last call, oldest first.
+    pub fn take_sounds(&mut self) -> Vec<Sound> {
+        std::mem::take(&mut self.sounds)
     }
 
     /// The ball sits still on the plunger, ready to launch.
@@ -310,8 +340,13 @@ impl Field {
         if self.balls == 0 {
             return Event::GameOver;
         }
-        self.flippers[0].raised = held.left;
-        self.flippers[1].raised = held.right;
+        for (flipper, up) in self.flippers.iter_mut().zip([held.left, held.right]) {
+            if up && !flipper.raised {
+                self.sounds.push(Sound::Flipper);
+            }
+            flipper.raised = up;
+        }
+        self.knock = 0.0;
         for flash in self.bumper_flash.iter_mut().chain(&mut self.sling_flash) {
             *flash = flash.saturating_sub(1);
         }
@@ -327,6 +362,7 @@ impl Field {
                 let speed = LAUNCH_MIN + (LAUNCH_MAX - LAUNCH_MIN) * self.plunger;
                 self.ball.vel = Vec2::new(0.0, -speed);
                 self.plunger = 0.0;
+                self.sounds.push(Sound::Launch);
             }
         } else if !held.plunger {
             self.plunger = 0.0;
@@ -351,6 +387,9 @@ impl Field {
             }
         }
         self.limit_speed();
+        if self.knock >= KNOCK_SPEED {
+            self.sounds.push(Sound::Knock);
+        }
         if !self.ball.pos.is_finite() {
             // Never expected; keep the game going rather than lose the ball.
             self.ball = Ball::on_plunger();
@@ -380,22 +419,26 @@ impl Field {
         self.ball.pos += self.ball.vel * (1.0 / parts);
 
         for &wall in &WALLS {
-            self.hit_wall(wall, WALL_BOUNCE);
+            let impact = self.hit_wall(wall, WALL_BOUNCE);
+            self.knock = self.knock.max(impact);
         }
         if !self.in_lane {
-            self.hit_wall(GATE, WALL_BOUNCE);
+            let impact = self.hit_wall(GATE, WALL_BOUNCE);
+            self.knock = self.knock.max(impact);
         }
         for (i, &sling) in SLINGS.iter().enumerate() {
-            if self.hit_wall(sling, WALL_BOUNCE) {
+            if self.hit_wall(sling, WALL_BOUNCE) > 0.0 {
                 self.kick_off(sling, SLING_KICK);
                 self.sling_flash[i] = FLASH_STEPS;
                 self.add(SLING_POINTS);
+                self.sounds.push(Sound::Sling);
             }
         }
         for i in 0..BUMPERS.len() {
             if self.hit_bumper(i) {
                 self.bumper_flash[i] = FLASH_STEPS;
                 self.add(BUMPER_POINTS);
+                self.sounds.push(Sound::Bumper);
             }
         }
         for (i, swing) in swings.into_iter().enumerate() {
@@ -411,31 +454,32 @@ impl Field {
         self.roll_over_lanes().then_some(Event::Bonus)
     }
 
-    /// Push the ball out of a wall and bounce it; true if it was moving into
-    /// the wall (a real hit, not resting contact).
-    fn hit_wall(&mut self, (a, b): Line, bounce: f32) -> bool {
+    /// Push the ball out of a wall and bounce it; the speed it hit at (0
+    /// when it only touched, or was moving away).
+    fn hit_wall(&mut self, (a, b): Line, bounce: f32) -> f32 {
         let contact = closest_point(self.ball.pos, a.into(), b.into());
         self.contact(contact, BALL_RADIUS, Vec2::default(), bounce)
     }
 
     /// Resolve a contact with a surface point moving at `surface` velocity,
-    /// the ball's centre to be kept `distance` away from it.
-    fn contact(&mut self, point: Vec2, distance: f32, surface: Vec2, bounce: f32) -> bool {
+    /// the ball's centre to be kept `distance` away from it; returns the
+    /// speed the ball hit at (0 for no hit).
+    fn contact(&mut self, point: Vec2, distance: f32, surface: Vec2, bounce: f32) -> f32 {
         let offset = self.ball.pos - point;
         let gap = offset.length();
         if gap >= distance || gap == 0.0 {
-            return false;
+            return 0.0;
         }
         let normal = offset * (1.0 / gap);
         self.ball.pos = point + normal * distance;
         let relative = self.ball.vel - surface;
         let into = relative.dot(normal);
         if into >= 0.0 {
-            return false;
+            return 0.0;
         }
         let bounce = if -into < REST_SPEED { 0.0 } else { bounce };
         self.ball.vel = relative - normal * ((1.0 + bounce) * into) + surface;
-        true
+        -into
     }
 
     /// Send the ball off a slingshot's face at `speed` at least.
@@ -490,10 +534,12 @@ impl Field {
         };
         self.lanes[lane] = true;
         self.add(LANE_POINTS);
+        self.sounds.push(Sound::Lane);
         if self.lanes.iter().all(|&lit| lit) {
             self.lanes = [false; 3];
             self.multiplier = (self.multiplier + 1).min(MAX_MULTIPLIER);
             self.add(LANES_BONUS);
+            self.sounds.push(Sound::Bonus);
             return true;
         }
         false
@@ -501,6 +547,7 @@ impl Field {
 
     fn drain(&mut self) -> Event {
         self.balls -= 1;
+        self.sounds.push(Sound::Drain);
         self.multiplier = 1;
         if self.balls == 0 {
             return Event::GameOver;

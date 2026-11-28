@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 bevy.workspace = true
 pixelfont.workspace = true
+sfx.workspace = true
 touch.workspace = true
 
 # The desktop draws with bevy's renderer (`display::gpu`).
@@ -29,6 +30,13 @@ bevy = { workspace = true, features = ["web"] }
 js-sys = "0.3"
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = [
+    "AudioBuffer",
+    "AudioBufferSourceNode",
+    "AudioContext",
+    "AudioDestinationNode",
+    "AudioNode",
+    "AudioScheduledSourceNode",
+    "BaseAudioContext",
     "CanvasRenderingContext2d",
     "Document",
     "Element",

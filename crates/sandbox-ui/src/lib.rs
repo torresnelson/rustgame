@@ -4,9 +4,11 @@
 //! [`SandboxPlugin`] shows scaled with hard pixel edges and letterboxed to the
 //! window. It also provides [`Pointers`] (mouse and multi-touch in canvas
 //! pixels), the window [`Orientation`], small text saves ([`storage`]), the
-//! shared 8-bit [`widgets`] and
-//! removes the web page's loading screen on the first frame.
+//! shared 8-bit [`widgets`], sound effects ([`audio`], added by the games
+//! that have sound) and removes the web page's loading screen on the first
+//! frame.
 
+pub mod audio;
 pub mod canvas;
 pub mod clock;
 pub mod display;

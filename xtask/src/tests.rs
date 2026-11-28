@@ -50,6 +50,8 @@ fn game_page_has_the_canvas_loading_screen_and_phone_settings() {
     // The wasm reaches `init` as a stream, so the browser compiles while it
     // downloads; wasm-bindgen streams only `application/wasm` responses.
     assert!(html.contains("new Response(counted"));
+    // sandbox_ui::audio plays into the context made on the first gesture.
+    assert!(html.contains("window.gameAudio = new Context()"));
     assert!(html.contains("'Content-Type': 'application/wasm'"));
 }
 

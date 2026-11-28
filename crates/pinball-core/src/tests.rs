@@ -264,3 +264,60 @@ fn the_ball_stays_on_the_table_whatever_happens() {
         }
     }
 }
+
+#[test]
+fn a_flipper_sounds_once_per_press() {
+    let mut field = Field::new();
+    for _ in 0..5 {
+        field.step(LEFT);
+    }
+    field.step(NONE);
+    field.step(LEFT);
+    let flips = field.take_sounds();
+    assert_eq!(flips, [Sound::Flipper, Sound::Flipper], "not while held");
+    assert!(field.take_sounds().is_empty(), "taken");
+}
+
+#[test]
+fn launching_hitting_and_draining_make_their_sounds() {
+    let mut field = Field::new();
+    run(&mut field, PULL, 10, |_| false);
+    field.step(NONE);
+    assert!(field.take_sounds().contains(&Sound::Launch));
+
+    let (x, y) = BUMPERS[0];
+    let mut field = in_play((x, y - 30.0), (0.0, 3.0));
+    run(&mut field, NONE, 20, |f| f.score > 0);
+    assert!(field.take_sounds().contains(&Sound::Bumper));
+
+    let mut field = in_play((60.0, 330.0), (-4.0, 0.0));
+    run(&mut field, NONE, 30, |f| f.score > 0);
+    assert!(field.take_sounds().contains(&Sound::Sling));
+
+    let mut field = in_play((LANES[2], 20.0), (0.0, 2.0));
+    field.lanes = [true, true, false];
+    run(&mut field, NONE, 40, |f| f.multiplier > 1);
+    let sounds = field.take_sounds();
+    let lane = sounds.iter().position(|&s| s == Sound::Lane);
+    let bonus = sounds.iter().position(|&s| s == Sound::Bonus);
+    assert!(lane.is_some() && lane < bonus, "{sounds:?}");
+
+    let mut field = in_play((138.0, 470.0), (0.0, 3.0));
+    run(&mut field, NONE, 30, |f| f.ball_ready());
+    assert!(field.take_sounds().contains(&Sound::Drain));
+}
+
+#[test]
+fn only_hard_wall_hits_knock() {
+    let mut field = in_play((20.0, 200.0), (-12.0, 0.0));
+    run(&mut field, NONE, 4, |_| false);
+    assert_eq!(field.take_sounds(), [Sound::Knock]);
+
+    // Rolling along a wall, or resting on the plunger, is quiet.
+    let mut field = in_play((8.0, 200.0), (-1.0, 0.0));
+    run(&mut field, NONE, 30, |_| false);
+    assert!(!field.take_sounds().contains(&Sound::Knock));
+    let mut field = Field::new();
+    run(&mut field, NONE, 30, |_| false);
+    assert!(field.take_sounds().is_empty());
+}

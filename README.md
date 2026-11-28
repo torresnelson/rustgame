@@ -20,7 +20,8 @@ https://torresnelson.github.io/rustgame/
 - **Bricks**: a paddle, a ball and four levels of bricks, faster every
   round.
 - **Pinball**: two flippers, a plunger, pop bumpers, slingshots and three
-  rollover lanes that raise the bonus multiplier; three balls a game.
+  rollover lanes that raise the bonus multiplier; three balls a game, with
+  8-bit sound effects made in code (`crates/sfx`).
 
 Game of Life, Tetris and Sand Simulator are ports of the Python/pygame
 versions in [torresnelson/pygame](https://github.com/torresnelson/pygame)
@@ -72,9 +73,10 @@ with their own look; each keeps its best score
   to launch.
 - Pinball: left/A/Z and right/D/M (or /) work the flippers, as do the
   left and right mouse buttons; hold space or down to pull the plunger and
-  let go to launch; p pauses. Each flipper press shifts the lit lanes. On a
-  phone hold either half of the screen for that flipper, and hold LAUNCH
-  for the plunger.
+  let go to launch; p pauses; s turns the sound off and on. Each flipper
+  press shifts the lit lanes. On a phone hold either half of the screen for
+  that flipper, and hold LAUNCH for the plunger. In the browser the sound
+  starts with the first tap or key press, as browsers require.
 
 In every game but Pong, a phone held upright gets a portrait layout with
 bigger buttons, and the game follows the phone when it is turned; on the
@@ -94,8 +96,9 @@ crates/mines-core    minesweeper rules: safe first opening, flood, chords
 crates/merge-core    sliding and merging tiles
 crates/bricks-core   paddle, ball and brick physics, levels
 crates/pinball-core  pinball physics: flippers, plunger, bumpers, lanes
+crates/sfx           8-bit sound effects synthesised in code
 crates/sandbox-ui    shared bevy layer: pixel canvas, pointers, orientation,
-                     saves, 8-bit widgets
+                     saves, 8-bit widgets, sound playback
 games/*              one bevy app per game
 web/                 page templates (landing page, game page with loading screen)
 xtask/               build tasks (`cargo xtask`, aliased in .cargo/config.toml)
