@@ -15,6 +15,10 @@ pub const FLICK_MS: u64 = 300;
 /// A held button starts repeating after this long.
 pub const REPEAT_DELAY_MS: u64 = 200;
 pub const REPEAT_MS: u64 = 60;
+/// A swipe is a straight move at least this long.
+pub const SWIPE_DISTANCE: i32 = 24;
+/// A press held this long without moving is a long press.
+pub const LONG_PRESS_MS: u64 = 450;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Button {
@@ -126,6 +130,36 @@ pub fn release_gesture(drag: &Drag, pos: Point, now_ms: u64) -> Option<Gesture> 
     None
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Swipe {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+/// The way a press moved from `start` to `pos` along its main axis, once it
+/// is at least `distance` long (a tie counts as vertical).
+pub fn swipe(start: Point, pos: Point, distance: i32) -> Option<Swipe> {
+    let (dx, dy) = (pos.0 - start.0, pos.1 - start.1);
+    if dx.abs().max(dy.abs()) < distance {
+        return None;
+    }
+    Some(match (dx.abs() > dy.abs(), dx > 0, dy > 0) {
+        (true, true, _) => Swipe::Right,
+        (true, false, _) => Swipe::Left,
+        (false, _, true) => Swipe::Down,
+        (false, _, false) => Swipe::Up,
+    })
+}
+
+/// Whether a press that started at `start` and is now at `pos` has stayed
+/// put long enough to be a long press.
+pub fn long_press(start: Point, start_ms: u64, pos: Point, now_ms: u64) -> bool {
+    let still = (pos.0 - start.0).abs() <= TAP_DISTANCE && (pos.1 - start.1).abs() <= TAP_DISTANCE;
+    still && now_ms.saturating_sub(start_ms) >= LONG_PRESS_MS
+}
+
 /// Repeats a button held for `held_ms` should have fired so far (not counting the press).
 pub fn repeats(held_ms: u64, delay: u64, interval: u64) -> u64 {
     if held_ms < delay {
@@ -232,6 +266,23 @@ mod tests {
         assert_eq!(repeats(200, 200, 60), 1);
         assert_eq!(repeats(259, 200, 60), 1);
         assert_eq!(repeats(260, 200, 60), 2);
+    }
+
+    #[test]
+    fn swipe_follows_the_main_axis_once_long_enough() {
+        assert_eq!(swipe((100, 100), (110, 105), 24), None);
+        assert_eq!(swipe((100, 100), (130, 110), 24), Some(Swipe::Right));
+        assert_eq!(swipe((100, 100), (70, 90), 24), Some(Swipe::Left));
+        assert_eq!(swipe((100, 100), (110, 140), 24), Some(Swipe::Down));
+        assert_eq!(swipe((100, 100), (90, 60), 24), Some(Swipe::Up));
+        assert_eq!(swipe((100, 100), (130, 130), 24), Some(Swipe::Down));
+    }
+
+    #[test]
+    fn long_press_needs_time_and_a_still_finger() {
+        assert!(!long_press((10, 10), 0, (12, 11), LONG_PRESS_MS - 1));
+        assert!(long_press((10, 10), 0, (12, 11), LONG_PRESS_MS));
+        assert!(!long_press((10, 10), 0, (40, 10), LONG_PRESS_MS * 2));
     }
 
     fn approx(a: (f32, f32, f32, f32), b: (f32, f32, f32, f32)) -> bool {

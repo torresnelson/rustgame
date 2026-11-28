@@ -3,7 +3,8 @@
 //! Games draw each frame on a CPU [`Canvas`] (like the pygame versions), which
 //! [`SandboxPlugin`] shows scaled with hard pixel edges and letterboxed to the
 //! window. It also provides [`Pointers`] (mouse and multi-touch in canvas
-//! pixels), the window [`Orientation`], small text saves ([`storage`]) and
+//! pixels), the window [`Orientation`], small text saves ([`storage`]), the
+//! shared 8-bit [`widgets`] and
 //! removes the web page's loading screen on the first frame.
 
 pub mod canvas;
@@ -15,6 +16,7 @@ pub mod storage;
 pub mod web;
 #[cfg(target_arch = "wasm32")]
 mod web_display;
+pub mod widgets;
 
 pub use canvas::{BLACK, Canvas, Rgb};
 pub use display::PixelCanvas;
