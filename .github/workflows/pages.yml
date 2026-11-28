@@ -4,8 +4,12 @@ name: Pages
 # a landing page at / and one folder per game (/gameoflife/, /tetris/,
 # /sandsimulator/, /pong/, /snake/, /minesweeper/, /merge/, /bricks/).
 
+# It runs after CI passes on master, so a commit that fails format, lint or
+# tests is never published; it can also be started by hand.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [master]
   workflow_dispatch:
 
@@ -20,9 +24,15 @@ concurrency:
 
 jobs:
   build:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
+      # The commit CI checked (empty when started by hand: the branch head).
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       # Matches rust-toolchain.toml.
       - uses: dtolnay/rust-toolchain@master
@@ -36,8 +46,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends binaryen
-          # Must match the wasm-bindgen version in Cargo.lock.
-          cargo install wasm-bindgen-cli --version 0.2.130 --locked
+          # The CLI must match the wasm-bindgen crate in Cargo.lock.
+          version=$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/version = |"/, ""); print; exit }' Cargo.lock)
+          cargo install wasm-bindgen-cli --version "$version" --locked
 
       - name: Build the site
         run: cargo xtask build-web

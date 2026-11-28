@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <!-- Page for one game; `cargo xtask build-web` fills in the TITLE placeholder
      and the NAME one (the wasm-bindgen output name). -->
+<!-- No page zoom: pinches and double taps are game input (drags, taps,
+     multi-touch painting). The games scale themselves to the screen. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#000000">
 <title>{{TITLE}}</title>
@@ -123,38 +125,33 @@
   const fill = document.getElementById('loading-fill');
   const label = document.getElementById('loading-status');
 
-  // Download the game with a real progress bar, then start it.
+  // Download the game with a real progress bar. The bytes are counted as
+  // they pass through to the browser, which compiles the game while it
+  // downloads (streaming compilation needs the `application/wasm` type).
   async function download(url) {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`${url}: ${response.status}`);
     // Servers that compress report the compressed size, so cap the bar at 90%.
     const total = Number(response.headers.get('content-length')) || 0;
-    if (!response.body || !total) return new Uint8Array(await response.arrayBuffer());
-    const reader = response.body.getReader();
-    const chunks = [];
+    if (!response.body || !total) return response;
     let received = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      received += value.length;
-      fill.style.width = `${Math.min(90, 90 * received / total).toFixed(1)}%`;
-    }
-    const bytes = new Uint8Array(received);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.length;
-    }
-    return bytes;
+    const counted = response.body.pipeThrough(new TransformStream({
+      transform(chunk, controller) {
+        received += chunk.length;
+        fill.style.width = `${Math.min(90, 90 * received / total).toFixed(1)}%`;
+        controller.enqueue(chunk);
+      },
+      flush() {
+        fill.style.width = '95%';
+        label.textContent = 'Starting game';
+      },
+    }));
+    return new Response(counted, { headers: { 'Content-Type': 'application/wasm' } });
   }
 
   label.textContent = 'Downloading';
   try {
-    const bytes = await download('./{{NAME}}_bg.wasm');
-    fill.style.width = '95%';
-    label.textContent = 'Starting game';
-    await init({ module_or_path: bytes });
+    await init({ module_or_path: await download('./{{NAME}}_bg.wasm') });
   } catch (error) {
     // bevy's event loop takes over by throwing this on purpose.
     if (!String(error).includes('Using exceptions for control flow')) {

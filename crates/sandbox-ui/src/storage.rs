@@ -42,20 +42,34 @@ mod tests {
 mod platform {
     use std::path::{Path, PathBuf};
 
-    /// `$XDG_DATA_HOME`, `~/.local/share` or `%APPDATA%`, plus `pygame-sandbox`.
-    pub fn data_dir() -> PathBuf {
-        let base = std::env::var_os("XDG_DATA_HOME")
+    /// Folder name of the saves; earlier builds used `LEGACY_NAME`.
+    const NAME: &str = "rustgame";
+    const LEGACY_NAME: &str = "pygame-sandbox";
+
+    /// `$XDG_DATA_HOME`, `~/.local/share` or `%APPDATA%`.
+    fn data_base() -> PathBuf {
+        std::env::var_os("XDG_DATA_HOME")
             .map(PathBuf::from)
             .or_else(|| {
                 std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share"))
             })
             .or_else(|| std::env::var_os("APPDATA").map(PathBuf::from))
-            .unwrap_or_else(|| PathBuf::from("."));
-        base.join("pygame-sandbox")
+            .unwrap_or_else(|| PathBuf::from("."))
+    }
+
+    /// Where saves are written.
+    pub fn data_dir() -> PathBuf {
+        data_base().join(NAME)
     }
 
     pub fn load_text_in(dir: &Path, key: &str) -> Option<String> {
         std::fs::read_to_string(dir.join(key)).ok()
+    }
+
+    /// The first of `dirs` that has `key`: saves from before the folder was
+    /// renamed still load, and the next save writes them to the new one.
+    pub fn load_text_from(dirs: &[PathBuf], key: &str) -> Option<String> {
+        dirs.iter().find_map(|dir| load_text_in(dir, key))
     }
 
     pub fn save_text_in(dir: &Path, key: &str, value: &str) -> Result<(), String> {
@@ -64,7 +78,7 @@ mod platform {
     }
 
     pub fn load_text(key: &str) -> Option<String> {
-        load_text_in(&data_dir(), key)
+        load_text_from(&[data_dir(), data_base().join(LEGACY_NAME)], key)
     }
 
     pub fn save_text(key: &str, value: &str) -> Result<(), String> {
@@ -91,8 +105,24 @@ mod platform {
         }
 
         #[test]
+        fn saves_in_the_old_folder_still_load() {
+            let base =
+                std::env::temp_dir().join(format!("sandbox-ui-legacy-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&base);
+            let (new, old) = (base.join(NAME), base.join(LEGACY_NAME));
+            save_text_in(&old, "snake.best", "40\n").unwrap();
+            let dirs = [new.clone(), old];
+            assert_eq!(load_text_from(&dirs, "snake.best").as_deref(), Some("40\n"));
+            // Once saved in the new folder, that copy wins.
+            save_text_in(&new, "snake.best", "90\n").unwrap();
+            assert_eq!(load_text_from(&dirs, "snake.best").as_deref(), Some("90\n"));
+            assert_eq!(load_text_from(&dirs, "missing"), None);
+            let _ = std::fs::remove_dir_all(base);
+        }
+
+        #[test]
         fn data_dir_is_named_after_the_project() {
-            assert!(data_dir().ends_with("pygame-sandbox"));
+            assert!(data_dir().ends_with("rustgame"));
         }
     }
 }

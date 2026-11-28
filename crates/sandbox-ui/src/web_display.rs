@@ -92,16 +92,9 @@ impl Surfaces {
         }
     }
 
-    fn draw(&mut self, pixel: &PixelCanvas) {
-        let (width, height) = pixel.canvas.size();
-        Self::put(
-            &self.frame,
-            &self.frame_context,
-            pixel.canvas.pixels(),
-            width,
-            height,
-        );
-
+    /// Show the frame; `changed`: the game touched the canvas since the last
+    /// call. An unchanged canvas on an unchanged page is not drawn again.
+    fn draw(&mut self, pixel: &PixelCanvas, changed: bool) {
         // Without bevy's renderer nothing sizes the page canvas's backing store
         // (it stays at the default 300x150), so match it to its size on the
         // page in device pixels, as the renderer's surface did.
@@ -110,9 +103,24 @@ impl Surfaces {
             (self.page.client_width() as f64 * ratio).round() as u32,
             (self.page.client_height() as f64 * ratio).round() as u32,
         );
-        if backing.0 > 0 && (self.page.width(), self.page.height()) != backing {
+        let resized = backing.0 > 0 && (self.page.width(), self.page.height()) != backing;
+        if resized {
             self.page.set_width(backing.0);
             self.page.set_height(backing.1);
+        }
+        if !changed && !resized {
+            return;
+        }
+
+        let (width, height) = pixel.canvas.size();
+        if changed {
+            Self::put(
+                &self.frame,
+                &self.frame_context,
+                pixel.canvas.pixels(),
+                width,
+                height,
+            );
         }
         let (page_w, page_h) = (self.page.width() as f32, self.page.height() as f32);
         let (x, y, w, h) = touch::fit_box(page_w, page_h, width as f32, height as f32);
@@ -144,11 +152,12 @@ impl Surfaces {
 
 fn present(canvas: Res<PixelCanvas>) {
     SURFACES.with_borrow_mut(|surfaces| {
-        if surfaces.is_none() {
+        let found_now = surfaces.is_none();
+        if found_now {
             *surfaces = Surfaces::find();
         }
         if let Some(surfaces) = surfaces {
-            surfaces.draw(&canvas);
+            surfaces.draw(&canvas, canvas.is_changed() || found_now);
         }
     });
 }
