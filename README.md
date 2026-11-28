@@ -13,23 +13,23 @@ https://torresnelson.github.io/rustgame/
 - **Pong**: against a computer that levels up as the game goes on, or
   two players on one keyboard; first to three matches of ten points.
 
-The first three are a port of the Python/pygame versions in
-[torresnelson/pygame](https://github.com/torresnelson/pygame); the plan is in
-`plans/claude/rust-rewrite.md`. Pong is a port of the C/raylib game in
-[torresnelson/pong](https://github.com/torresnelson/pong)
-(`plans/claude/pong-port.md`).
+Game of Life, Tetris and Sand Simulator are ports of the Python/pygame
+versions in [torresnelson/pygame](https://github.com/torresnelson/pygame)
+(plan: `plans/claude/rust-rewrite.md`). Pong is a port of the C/raylib game
+in [torresnelson/pong](https://github.com/torresnelson/pong) (plan:
+`plans/claude/pong-port.md`).
 
 ## Controls
 
 - Game of Life: tap a pattern to preview it and START to load it (a mouse
   click loads it straight away). On the board the buttons run/pause, step,
   change speed, reset, clear and go back; tap cells while paused. Keys:
-  up/down + enter, space, n, + -, r, c, esc.
+  up/down (or k/j) + enter, space, n, + -, r, c, esc.
 - Tetris: tap rotates, drag sideways moves, drag down soft drops, flick down
   hard drops; PAUSE and END buttons. Held upright, thumb buttons `<` `ROT`
   `>` `DOWN` `DROP` sit under the board (left, right and down repeat while
   held). A high score asks for a name on an on-screen keyboard. Keys:
-  arrows, space, p, esc. Scores are kept in the browser's local storage, or
+  arrows, enter, space, p, esc. Scores are kept in the browser's local storage, or
   in `~/.local/share/pygame-sandbox/` on the desktop.
 - Sand Simulator: paint with a finger or the left mouse button, erase with
   the right one; the toolbar picks sand, water, stone or the eraser, the
@@ -39,13 +39,15 @@ The first three are a port of the Python/pygame versions in
   2, a click or a tap. Player one moves with w/s (and the arrows when
   playing alone), player two with the arrows; space pauses, m goes back
   to the menu when paused or after a win, enter asks for a rematch, esc
-  quits on the desktop. On a phone, held sideways: the left third of the
-  screen is the paddle controller (top half up, bottom half down), the
-  button at the top centre pauses, and a tap continues.
+  quits on the desktop. On a phone, held sideways and against the
+  computer: the left third of the screen is the paddle controller (top
+  half up, bottom half down), the button at the top centre pauses, and a
+  tap continues.
 
-A phone held upright gets a portrait layout with bigger buttons, and the
-games follow the phone when it is turned (Pong stays landscape). On the
-desktop, `--portrait` opens that layout.
+In Game of Life, Tetris and Sand Simulator, a phone held upright gets a
+portrait layout with bigger buttons, and the game follows the phone when
+it is turned; on the desktop, `--portrait` opens that layout. Pong is
+landscape only.
 
 ## Layout
 
@@ -59,20 +61,26 @@ crates/pong-core     pong rules and computer opponent
 crates/sandbox-ui    shared bevy layer: pixel canvas, pointers, orientation, saves
 games/*              one bevy app per game
 web/                 page templates (landing page, game page with loading screen)
-xtask/               build tasks
+xtask/               build tasks (`cargo xtask`, aliased in .cargo/config.toml)
+plans/               design plans and their summaries
+ai/                  prompt records for AI-assisted changes
 ```
 
 The game logic crates do not depend on bevy and carry most of the tests.
 
 ## Run
 
-Bevy needs some native libraries; on NixOS `shell.nix` provides them and the
+Bevy needs some native libraries. On NixOS `shell.nix` provides them, the
 pinned toolchain (`rust-toolchain.toml`, with the `wasm32-unknown-unknown`
-target):
+target) and the browser build tools:
 
     nix-shell
     cargo run -p game-of-life        # or tetris, sand-simulator, pong
     cargo test --workspace
+
+On Debian or Ubuntu, install them with rustup and:
+
+    sudo apt install pkg-config libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
 
 The first build compiles bevy and takes several minutes.
 
@@ -82,9 +90,10 @@ The first build compiles bevy and takes several minutes.
     cargo xtask build-web sandsimulator
     python3 -m http.server -d site   # then open http://localhost:8000
 
-It needs `wasm-bindgen` (the version in `Cargo.lock`) and, optionally,
-`wasm-opt` from binaryen for a smaller download. Each game is about 5 MB
-compressed.
+It needs `wasm-bindgen-cli` at the version of `wasm-bindgen` in
+`Cargo.lock` (0.2.130) and, optionally, `wasm-opt` from binaryen for a
+smaller download; `nix-shell` has both. Each game is about 5 MB compressed.
 
-Every push to `master` runs `.github/workflows/ci.yml` (format, clippy, tests,
-wasm build) and `.github/workflows/pages.yml`, which publishes the site.
+Every pull request and push to `master` runs `.github/workflows/ci.yml`
+(format, clippy, tests, wasm build); every push to `master` also runs
+`.github/workflows/pages.yml`, which publishes the site.
