@@ -1,0 +1,13 @@
+[package]
+name = "pong-core"
+description = "Pong rules and computer opponent (port of game.c and computer.c from torresnelson/pong)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+fastrand.workspace = true
+
+[lints]
+workspace = true
