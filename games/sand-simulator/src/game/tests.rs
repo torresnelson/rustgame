@@ -157,19 +157,25 @@ fn painting_pours_sand_and_the_right_button_erases() {
     game.handle(Event::Key(None), &layout); // any key starts
     game.handle(Event::Key(Some("pause")), &layout);
     for _ in 0..10 {
-        game.update(&[Paint {
-            pos: (400, 300),
-            erase: false,
-            start_ms: 1,
-        }]);
+        game.update(
+            &[Paint {
+                pos: (400, 300),
+                erase: false,
+                start_ms: 1,
+            }],
+            1,
+        );
     }
     let poured = sandbox(&game).world.count(Material::Sand);
     assert!(poured > 10, "{poured}");
-    game.update(&[Paint {
-        pos: (400, 300),
-        erase: true,
-        start_ms: 1,
-    }]);
+    game.update(
+        &[Paint {
+            pos: (400, 300),
+            erase: true,
+            start_ms: 1,
+        }],
+        1,
+    );
     assert!(sandbox(&game).world.count(Material::Sand) < poured);
 }
 
@@ -178,15 +184,29 @@ fn pause_stops_the_physics() {
     let layout = landscape();
     let mut game = Game::new(false, 1);
     game.handle(Event::Key(None), &layout);
-    game.update(&[Paint {
-        pos: (400, 5),
-        erase: false,
-        start_ms: 1,
-    }]);
+    game.update(
+        &[Paint {
+            pos: (400, 5),
+            erase: false,
+            start_ms: 1,
+        }],
+        1,
+    );
     game.handle(Event::Key(Some("pause")), &layout);
     let before = sandbox(&game).world.material.clone();
-    game.update(&[]);
+    game.update(&[], 1);
     assert_eq!(sandbox(&game).world.material, before);
+}
+
+#[test]
+fn the_physics_runs_as_many_steps_as_the_clock_allows() {
+    let layout = landscape();
+    let mut game = Game::new(false, 1);
+    game.handle(Event::Key(None), &layout);
+    game.update(&[], 0); // a 144 Hz frame with no step due
+    assert_eq!(sandbox(&game).world.tick, 0);
+    game.update(&[], 2); // a 30 Hz frame catches up two steps
+    assert_eq!(sandbox(&game).world.tick, 2);
 }
 
 #[test]
@@ -194,11 +214,14 @@ fn turning_the_phone_keeps_the_sand() {
     let mut game = Game::new(true, 1);
     game.handle(Event::Press((10, 10)), &landscape());
     for _ in 0..200 {
-        game.update(&[Paint {
-            pos: (100, 300),
-            erase: false,
-            start_ms: 1,
-        }]);
+        game.update(
+            &[Paint {
+                pos: (100, 300),
+                erase: false,
+                start_ms: 1,
+            }],
+            1,
+        );
     }
     let grains = sandbox(&game).world.count(Material::Sand);
     game.relayout(&portrait());
@@ -237,17 +260,23 @@ fn the_tap_that_opens_the_sandbox_does_not_paint() {
     game.handle(Event::Press((400, 300)), &layout);
     game.handle(Event::Key(Some("pause")), &layout);
     // Still held: same press, started at 500.
-    game.update(&[Paint {
-        pos: (400, 300),
-        erase: false,
-        start_ms: 500,
-    }]);
+    game.update(
+        &[Paint {
+            pos: (400, 300),
+            erase: false,
+            start_ms: 500,
+        }],
+        1,
+    );
     assert_eq!(sandbox(&game).world.count(Material::Sand), 0);
     // A new press paints.
-    game.update(&[Paint {
-        pos: (400, 300),
-        erase: false,
-        start_ms: 900,
-    }]);
+    game.update(
+        &[Paint {
+            pos: (400, 300),
+            erase: false,
+            start_ms: 900,
+        }],
+        1,
+    );
     assert!(sandbox(&game).world.count(Material::Sand) > 0);
 }

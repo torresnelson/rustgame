@@ -27,21 +27,6 @@ fn playing(one_player: bool) -> Game {
 }
 
 #[test]
-fn steps_follow_the_clock_and_cap_slow_frames() {
-    let mut carry = 0.0;
-    assert_eq!(steps_due(&mut carry, 1.0 / 60.0 + 1e-4), 1);
-    // A 120 Hz screen steps every other frame.
-    let mut carry = 0.0;
-    let frames: Vec<u32> = (0..4)
-        .map(|_| steps_due(&mut carry, 1.0 / 120.0 + 1e-5))
-        .collect();
-    assert_eq!(frames, [0, 1, 0, 1]);
-    // A stalled tab catches up a little, not the whole gap.
-    assert_eq!(steps_due(&mut carry, 3.0), MAX_STEPS_PER_FRAME);
-    assert_eq!(carry, 0.0);
-}
-
-#[test]
 fn the_menu_chooses_with_keys_and_starts() {
     let mut game = game();
     step(&mut game, &[key(Key::Down)]);

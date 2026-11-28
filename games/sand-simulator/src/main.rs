@@ -23,6 +23,8 @@ struct Sand {
     fps: f32,
     /// Pixel scrolling not yet worth a whole brush step.
     wheel_carry: f32,
+    /// Physics steps owed, as a fraction of a step.
+    step_carry: f32,
 }
 
 const KEYS: [(KeyCode, &str); 9] = [
@@ -51,6 +53,7 @@ fn main() {
         },
         fps: 60.0,
         wheel_carry: 0.0,
+        step_carry: 0.0,
     };
     let (width, height) = if portrait {
         sand.portrait.size
@@ -83,6 +86,7 @@ fn play(
         current,
         fps,
         wheel_carry,
+        step_carry,
     } = &mut *sand;
     let layout = match *orientation {
         Orientation::Landscape => &*landscape,
@@ -134,9 +138,9 @@ fn play(
             start_ms: p.start_ms,
         })
         .collect();
-    game.update(&paints);
-
     let delta = time.delta_secs();
+    game.update(&paints, sandbox_ui::clock::steps_due(step_carry, delta));
+
     if delta > 0.0 {
         *fps += (1.0 / delta - *fps) * 0.1;
     }

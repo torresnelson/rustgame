@@ -85,17 +85,27 @@ fn commands_build_bind_and_optimise() {
     let build = build_command(game);
     assert_eq!(&build[..4], ["cargo", "build", "--profile", PROFILE]);
     assert_eq!(build.last().unwrap(), game.crate_name);
-    let bindgen = bindgen_command(Path::new("/w"), game, Path::new("/site/x"));
+    let bindgen = bindgen_command(Path::new("/w/target"), game, Path::new("/site/x"));
     assert_eq!(bindgen[0], "wasm-bindgen");
-    assert!(
-        bindgen
-            .last()
-            .unwrap()
-            .ends_with("web-release/sand-simulator.wasm")
+    assert_eq!(
+        bindgen.last().unwrap(),
+        "/w/target/wasm32-unknown-unknown/web-release/sand-simulator.wasm"
     );
     let optimise = optimise_command(Path::new("/site/x/game_bg.wasm"));
     assert_eq!(&optimise[..2], ["wasm-opt", "-Oz"]);
     assert!(optimise.contains(&"--enable-reference-types".to_owned()));
+}
+
+#[test]
+fn target_dir_follows_cargo_target_dir() {
+    let root = Path::new("/w");
+    assert_eq!(target_dir(root, None), Path::new("/w/target"));
+    assert_eq!(
+        target_dir(root, Some("/cache/target".into())),
+        Path::new("/cache/target")
+    );
+    // Relative to the workspace root, where cargo runs.
+    assert_eq!(target_dir(root, Some("out".into())), Path::new("/w/out"));
 }
 
 fn args(list: &[&str]) -> Vec<String> {

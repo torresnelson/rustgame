@@ -95,7 +95,7 @@ fn play(
             .collect(),
     };
 
-    for _ in 0..game::steps_due(carry, time.delta_secs()) {
+    for _ in 0..sandbox_ui::clock::steps_due(carry, time.delta_secs()) {
         let events = std::mem::take(pending);
         if game.step(&events, &held) == Outcome::Quit {
             exit.write(AppExit::Success);

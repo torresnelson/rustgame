@@ -16,10 +16,6 @@ use touch::{Button, TAP_DISTANCE, button_at};
 
 /// Where the best score is saved.
 pub const STORAGE_KEY: &str = "bricks.best";
-/// Logic steps per second; every speed in `bricks_core` is per step.
-pub const STEPS_PER_SECOND: f32 = 60.0;
-/// At most this many steps catch up after a slow frame.
-pub const MAX_STEPS_PER_FRAME: u32 = 4;
 /// Banners ("LEVEL 2", "BALL LOST") show this many steps.
 pub const BANNER_STEPS: u64 = 90;
 /// The game over screen ignores taps this many steps.
@@ -159,19 +155,6 @@ pub fn portrait() -> Layout {
         help_pos: (0, 0),
         drag_strip: Some(Rect::new(8, 560, 360, 112)),
     }
-}
-
-/// Whole steps due after `delta` seconds, plus the `carry` left from earlier
-/// frames; the remainder is carried on.
-pub fn steps_due(carry: &mut f32, delta: f32) -> u32 {
-    *carry += delta * STEPS_PER_SECOND;
-    let steps = carry.floor();
-    if steps > MAX_STEPS_PER_FRAME as f32 {
-        *carry = 0.0;
-        return MAX_STEPS_PER_FRAME;
-    }
-    *carry -= steps;
-    steps as u32
 }
 
 /// A finger or mouse button held down.

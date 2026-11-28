@@ -11,7 +11,21 @@ bevy.workspace = true
 pixelfont.workspace = true
 touch.workspace = true
 
+# The desktop draws with bevy's renderer (`display::gpu`).
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+bevy = { workspace = true, features = [
+    "2d",
+    "bevy_state",
+    "audio",
+    "wav",
+    "x11",
+    "wayland",
+] }
+
+# The browser draws with the page canvas's 2D context (`web_display`), so it
+# needs no renderer.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+bevy = { workspace = true, features = ["web"] }
 js-sys = "0.3"
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = [

@@ -120,7 +120,7 @@ The first build compiles bevy and takes several minutes.
 
 It needs `wasm-bindgen-cli` at the version of `wasm-bindgen` in
 `Cargo.lock` (0.2.130) and, optionally, `wasm-opt` from binaryen for a
-smaller download; `nix-shell` has both. Each game is about 5 MB compressed.
+smaller download; `nix-shell` has both. Each game is about 1.5 MB compressed.
 
 Every pull request and push to `master` runs `.github/workflows/ci.yml`
 (format, clippy, tests, wasm build); every push to `master` also runs

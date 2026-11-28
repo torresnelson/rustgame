@@ -17,6 +17,7 @@
 //! site/bricks/             Bricks
 //! ```
 
+use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -137,14 +138,20 @@ fn build_command(game: &Game) -> Vec<String> {
     .to_vec()
 }
 
-fn wasm_path(root: &Path, game: &Game) -> PathBuf {
-    root.join("target")
+/// Where cargo puts its output: `CARGO_TARGET_DIR` when set (relative to the
+/// workspace root, where the build runs), else `target/` in the root.
+fn target_dir(root: &Path, cargo_target_dir: Option<OsString>) -> PathBuf {
+    cargo_target_dir.map_or_else(|| root.join("target"), |dir| root.join(dir))
+}
+
+fn wasm_path(target: &Path, game: &Game) -> PathBuf {
+    target
         .join(TARGET)
         .join(PROFILE)
         .join(format!("{}.wasm", game.crate_name))
 }
 
-fn bindgen_command(root: &Path, game: &Game, out_dir: &Path) -> Vec<String> {
+fn bindgen_command(target: &Path, game: &Game, out_dir: &Path) -> Vec<String> {
     let mut command: Vec<String> = [
         "wasm-bindgen",
         "--target",
@@ -156,7 +163,7 @@ fn bindgen_command(root: &Path, game: &Game, out_dir: &Path) -> Vec<String> {
     .to_vec();
     command.push(out_dir.display().to_string());
     command.extend(["--out-name".to_owned(), OUTPUT_NAME.to_owned()]);
-    command.push(wasm_path(root, game).display().to_string());
+    command.push(wasm_path(target, game).display().to_string());
     command
 }
 
@@ -192,7 +199,8 @@ fn build_game(root: &Path, game: &Game, site: &Path, template: &str) -> Result<(
     }
     fs::create_dir_all(&out_dir).map_err(|error| error.to_string())?;
     run(&build_command(game), root)?;
-    run(&bindgen_command(root, game, &out_dir), root)?;
+    let target = target_dir(root, std::env::var_os("CARGO_TARGET_DIR"));
+    run(&bindgen_command(&target, game, &out_dir), root)?;
     // Optional size pass: an old or missing wasm-opt only costs download size.
     let wasm = out_dir.join(format!("{OUTPUT_NAME}_bg.wasm"));
     if let Err(error) = run(&optimise_command(&wasm), root) {

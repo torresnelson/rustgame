@@ -1,6 +1,26 @@
 //! Wall-clock helpers that work natively and in the browser, where
 //! `std::time::SystemTime` is unavailable.
 
+/// Logic steps per second for games that advance in fixed steps, so they
+/// play at the same speed on 60, 120 and 144 Hz screens.
+pub const STEPS_PER_SECOND: f32 = 60.0;
+/// At most this many steps catch up after a slow frame, so a stalled tab
+/// does not fast-forward the game.
+pub const MAX_STEPS_PER_FRAME: u32 = 4;
+
+/// Whole steps due after `delta` seconds, plus the `carry` left from earlier
+/// frames; the remainder is carried on.
+pub fn steps_due(carry: &mut f32, delta: f32) -> u32 {
+    *carry += delta * STEPS_PER_SECOND;
+    let steps = carry.floor();
+    if steps > MAX_STEPS_PER_FRAME as f32 {
+        *carry = 0.0;
+        return MAX_STEPS_PER_FRAME;
+    }
+    *carry -= steps;
+    steps as u32
+}
+
 /// Milliseconds since the Unix epoch.
 pub fn unix_millis() -> u64 {
     #[cfg(target_arch = "wasm32")]
@@ -48,6 +68,24 @@ pub fn iso_date(days_since_epoch: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn steps_follow_the_clock_and_cap_slow_frames() {
+        let mut carry = 0.0;
+        assert_eq!(steps_due(&mut carry, 1.0 / 60.0 + 1e-4), 1);
+        // A 120 Hz screen steps every other frame.
+        let mut carry = 0.0;
+        let frames: Vec<u32> = (0..4)
+            .map(|_| steps_due(&mut carry, 1.0 / 120.0 + 1e-5))
+            .collect();
+        assert_eq!(frames, [0, 1, 0, 1]);
+        // A 30 Hz screen steps twice a frame.
+        let mut carry = 0.0;
+        assert_eq!(steps_due(&mut carry, 1.0 / 30.0 + 1e-4), 2);
+        // A stalled tab catches up a little, not the whole gap.
+        assert_eq!(steps_due(&mut carry, 3.0), MAX_STEPS_PER_FRAME);
+        assert_eq!(carry, 0.0);
+    }
 
     #[test]
     fn iso_date_converts_day_counts() {
