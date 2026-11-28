@@ -93,6 +93,19 @@ pub fn window_to_canvas(pos: Vec2, window: Vec2, canvas: (i32, i32)) -> (i32, i3
     )
 }
 
+/// `hover` if it differs from `last`, which then remembers it.
+///
+/// `Pointers::hover` holds the cursor every frame, moved or not; games turn
+/// only real moves into hover events, so a resting cursor does not keep
+/// overriding a keyboard selection.
+pub fn hover_moved(last: &mut Option<(i32, i32)>, hover: Option<(i32, i32)>) -> Option<(i32, i32)> {
+    if hover == *last {
+        return None;
+    }
+    *last = hover;
+    hover
+}
+
 pub(crate) fn plugin(app: &mut App) {
     app.init_resource::<Pointers>()
         .add_systems(PreUpdate, update_pointers.after(InputSystems));
@@ -182,6 +195,16 @@ mod tests {
         );
         // Left of the canvas (in the bar) maps to a negative x.
         assert!(window_to_canvas(Vec2::new(1.0, 100.0), window, (400, 350)).0 < 0);
+    }
+
+    #[test]
+    fn hover_moved_reports_each_new_position_once() {
+        let mut last = None;
+        assert_eq!(hover_moved(&mut last, None), None);
+        assert_eq!(hover_moved(&mut last, Some((3, 4))), Some((3, 4)));
+        assert_eq!(hover_moved(&mut last, Some((3, 4))), None);
+        assert_eq!(hover_moved(&mut last, Some((5, 4))), Some((5, 4)));
+        assert_eq!(last, Some((5, 4)));
     }
 
     #[test]

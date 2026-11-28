@@ -390,8 +390,22 @@ impl Play {
         }
     }
 
+    /// Repeats the held button has come due for since the last call.
+    fn take_repeats(&mut self, now: u64) -> u64 {
+        let Some(held) = &mut self.held else {
+            return 0;
+        };
+        let due = repeats(now.saturating_sub(held.since), REPEAT_DELAY_MS, REPEAT_MS);
+        let new = due.saturating_sub(held.fired);
+        held.fired = due;
+        new
+    }
+
     /// Advance the clock; the result once GAME OVER has been shown.
     fn update(&mut self, now: u64, elapsed: u64, rng: &mut fastrand::Rng) -> Option<GameResult> {
+        // Taken first so repeats due while paused or flashing are dropped,
+        // not fired all at once afterwards.
+        let repeats = self.take_repeats(now);
         if let Some(since) = self.over {
             return (now.saturating_sub(since) >= GAME_OVER_MS).then(|| self.result());
         }
@@ -405,13 +419,11 @@ impl Play {
         if self.paused {
             return None;
         }
-        if let Some(held) = &mut self.held {
-            let due = repeats(now.saturating_sub(held.since), REPEAT_DELAY_MS, REPEAT_MS);
+        if let Some(held) = self.held {
             let grid = create_grid(&self.locked);
-            for _ in held.fired..due {
+            for _ in 0..repeats {
                 apply_move(&mut self.current, &grid, held.action);
             }
-            held.fired = due;
         }
         self.fall_ms += elapsed;
         if self.fall_ms as f32 / 1000.0 >= fall_interval(self.level) {

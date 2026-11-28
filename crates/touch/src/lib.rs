@@ -45,6 +45,8 @@ pub fn button_at(buttons: &[Button], pos: Point) -> Option<&'static str> {
 }
 
 /// Lay `(action, label)` pairs out left to right in equal slots filling `width`.
+///
+/// No pairs give no buttons.
 pub fn button_row(
     specs: &[(&'static str, &'static str)],
     x: i32,
@@ -54,6 +56,9 @@ pub fn button_row(
     gap: i32,
 ) -> Vec<Button> {
     let count = specs.len() as i32;
+    if count == 0 {
+        return Vec::new();
+    }
     let slot = (width - gap * (count - 1)).div_euclid(count);
     specs
         .iter()
@@ -162,6 +167,11 @@ mod tests {
         }
         let last = row.last().unwrap().rect;
         assert!(last.x + last.w <= 8 + 300);
+    }
+
+    #[test]
+    fn button_row_of_nothing_is_empty() {
+        assert!(button_row(&[], 0, 0, 100, 10, 4).is_empty());
     }
 
     #[test]

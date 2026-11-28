@@ -8,6 +8,7 @@
 //! ```text
 //! site/index.html          landing page, one box per game
 //! site/gameoflife/         Game of Life
+//! site/tetris/             Tetris
 //! site/sandsimulator/      Sand Simulator
 //! ```
 
@@ -175,19 +176,26 @@ fn build_game(root: &Path, game: &Game, site: &Path, template: &str) -> Result<(
     Ok(())
 }
 
-fn build_web(args: &[String]) -> Result<(), String> {
-    let root = root();
+/// The site folder and the games to build, from `build-web`'s arguments.
+///
+/// A relative `--site` is taken from `cwd`, where the command was run, and
+/// made absolute: the build tools run from the workspace root.
+fn parse_args(
+    args: &[String],
+    root: &Path,
+    cwd: &Path,
+) -> Result<(PathBuf, Vec<&'static Game>), String> {
     let mut site = root.join("site");
     let mut names = Vec::new();
     let mut args = args.iter();
     while let Some(arg) = args.next() {
         if arg == "--site" {
-            site = PathBuf::from(args.next().ok_or("--site needs a folder")?);
+            site = cwd.join(args.next().ok_or("--site needs a folder")?);
         } else {
             names.push(arg.as_str());
         }
     }
-    let games: Vec<&Game> = if names.is_empty() {
+    let games = if names.is_empty() {
         GAMES.iter().collect()
     } else {
         names
@@ -200,6 +208,13 @@ fn build_web(args: &[String]) -> Result<(), String> {
             })
             .collect::<Result<_, _>>()?
     };
+    Ok((site, games))
+}
+
+fn build_web(args: &[String]) -> Result<(), String> {
+    let root = root();
+    let cwd = std::env::current_dir().map_err(|error| error.to_string())?;
+    let (site, games) = parse_args(args, &root, &cwd)?;
     let read =
         |name: &str| fs::read_to_string(root.join("web").join(name)).map_err(|e| e.to_string());
     let (game_template, landing_template) = (read("game.html")?, read("landing.html")?);

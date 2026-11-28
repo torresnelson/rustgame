@@ -1,11 +1,12 @@
 name: Pages
 
 # Build the browser versions of the games and publish them to GitHub Pages:
-# a landing page at / and one folder per game (/gameoflife/, /sandsimulator/).
+# a landing page at / and one folder per game (/gameoflife/, /tetris/,
+# /sandsimulator/).
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 permissions:

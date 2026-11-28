@@ -113,10 +113,7 @@ fn play(
             _ => {}
         }
     }
-    if pointers.hover != *last_hover {
-        *last_hover = pointers.hover;
-        events.extend(pointers.hover.map(Event::Hover));
-    }
+    events.extend(sandbox_ui::hover_moved(&mut last_hover, pointers.hover).map(Event::Hover));
     let left_or_touch = |p: &&Pointer| p.id != PointerId::MouseRight;
     let pressed = pointers.pressed.iter().filter(left_or_touch);
     events.extend(pressed.map(|p| Event::Press {

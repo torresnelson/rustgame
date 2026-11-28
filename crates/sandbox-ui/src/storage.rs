@@ -60,6 +60,7 @@ mod platform {
                 load_text_in(&dir, "tetris.highscores").as_deref(),
                 Some("[]\n")
             );
+            let _ = std::fs::remove_dir_all(dir.parent().unwrap());
         }
 
         #[test]

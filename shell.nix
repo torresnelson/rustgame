@@ -1,6 +1,6 @@
 # Rust toolchain and the native libraries bevy needs on NixOS.
 #
-#   cd rust && nix-shell
+#   nix-shell
 #   cargo run -p tetris
 with (import <nixpkgs> {});
 let

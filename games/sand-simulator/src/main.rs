@@ -21,6 +21,8 @@ struct Sand {
     portrait: Layout,
     current: Orientation,
     fps: f32,
+    /// Pixel scrolling not yet worth a whole brush step.
+    wheel_carry: f32,
 }
 
 const KEYS: [(KeyCode, &str); 9] = [
@@ -48,6 +50,7 @@ fn main() {
             Orientation::Landscape
         },
         fps: 60.0,
+        wheel_carry: 0.0,
     };
     let (width, height) = if portrait {
         sand.portrait.size
@@ -79,6 +82,7 @@ fn play(
         portrait,
         current,
         fps,
+        wheel_carry,
     } = &mut *sand;
     let layout = match *orientation {
         Orientation::Landscape => &*landscape,
@@ -102,7 +106,7 @@ fn play(
     for scroll in wheel.read() {
         let steps = match scroll.unit {
             MouseScrollUnit::Line => scroll.y.signum() as i32,
-            MouseScrollUnit::Pixel => (scroll.y / 40.0) as i32,
+            MouseScrollUnit::Pixel => game::pixel_wheel_steps(wheel_carry, scroll.y),
         };
         if steps != 0 {
             events.push(Event::Wheel(steps));
