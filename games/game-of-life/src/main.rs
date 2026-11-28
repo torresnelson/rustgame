@@ -19,7 +19,7 @@ struct Life {
     portrait: Layout,
 }
 
-const KEYS: [(KeyCode, Key); 14] = [
+const KEYS: [(KeyCode, Key); 15] = [
     (KeyCode::ArrowUp, Key::Up),
     (KeyCode::KeyK, Key::Up),
     (KeyCode::ArrowDown, Key::Down),
@@ -34,6 +34,7 @@ const KEYS: [(KeyCode, Key); 14] = [
     (KeyCode::Minus, Key::Slower),
     (KeyCode::NumpadSubtract, Key::Slower),
     (KeyCode::KeyR, Key::Reset),
+    (KeyCode::KeyC, Key::Clear),
 ];
 
 fn main() {
@@ -66,6 +67,7 @@ fn play(
     keys: Res<ButtonInput<KeyCode>>,
     pointers: Res<Pointers>,
     orientation: Res<Orientation>,
+    mut last_hover: Local<Option<(i32, i32)>>,
 ) {
     let Life {
         game,
@@ -82,14 +84,7 @@ fn play(
         .filter(|(code, _)| keys.just_pressed(*code))
         .map(|&(_, key)| Event::Key(key))
         .collect();
-    if keys.just_pressed(KeyCode::KeyC) {
-        events.push(Event::Key(Key::Clear));
-    }
-    if pointers.is_changed()
-        && let Some(pos) = pointers.hover
-    {
-        events.push(Event::Hover(pos));
-    }
+    events.extend(sandbox_ui::hover_moved(&mut last_hover, pointers.hover).map(Event::Hover));
     events.extend(
         pointers
             .pressed

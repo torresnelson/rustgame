@@ -20,7 +20,7 @@ pub use canvas::{BLACK, Canvas, Rgb};
 pub use display::PixelCanvas;
 pub use orientation::Orientation;
 pub use pixelfont::Rect;
-pub use pointer::{Pointer, PointerId, Pointers};
+pub use pointer::{Pointer, PointerId, Pointers, hover_moved};
 
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
