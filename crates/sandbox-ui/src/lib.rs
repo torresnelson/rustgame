@@ -47,26 +47,16 @@ pub fn game_window(title: &str, width: u32, height: u32) -> Window {
 
 /// A bevy app with the default plugins, the shared window and a black background.
 ///
-/// In the browser bevy's renderer is not started: the games are shown with
-/// the page canvas's 2D context instead (see `display`).
+/// The browser build has no renderer at all (see `Cargo.toml`): the games are
+/// shown with the page canvas's 2D context instead (see `display`).
 pub fn game_app(title: &str, width: u32, height: u32) -> App {
     let mut app = App::new();
-    let plugins = DefaultPlugins.set(WindowPlugin {
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(game_window(title, width, height)),
         ..default()
-    });
-    #[cfg(target_arch = "wasm32")]
-    let plugins = plugins.set(bevy::render::RenderPlugin {
-        render_creation: bevy::render::settings::RenderCreation::Automatic(Box::new(
-            bevy::render::settings::WgpuSettings {
-                backends: None,
-                ..default()
-            },
-        )),
-        ..default()
-    });
-    app.add_plugins(plugins)
-        .insert_resource(ClearColor(Color::BLACK));
+    }));
+    #[cfg(not(target_arch = "wasm32"))]
+    app.insert_resource(ClearColor(Color::BLACK));
     app
 }
 

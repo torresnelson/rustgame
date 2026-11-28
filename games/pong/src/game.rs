@@ -13,11 +13,6 @@ use sandbox_ui::{Canvas, Rgb};
 
 pub const WIDTH: i32 = SCREEN_WIDTH as i32;
 pub const HEIGHT: i32 = SCREEN_HEIGHT as i32;
-/// Logic steps per second; every speed in `pong_core` is per step.
-pub const STEPS_PER_SECOND: f32 = 60.0;
-/// At most this many steps catch up after a slow frame, so a stalled tab
-/// does not fast-forward the game.
-pub const MAX_STEPS_PER_FRAME: u32 = 4;
 
 // raylib's colours, as in the C version.
 pub const BLACK: Rgb = (0, 0, 0);
@@ -76,19 +71,6 @@ pub struct Held {
 pub enum Outcome {
     Continue,
     Quit,
-}
-
-/// Whole steps due after `delta` seconds, plus the `carry` left from earlier
-/// frames; the remainder is carried on.
-pub fn steps_due(carry: &mut f32, delta: f32) -> u32 {
-    *carry += delta * STEPS_PER_SECOND;
-    let steps = carry.floor();
-    if steps > MAX_STEPS_PER_FRAME as f32 {
-        *carry = 0.0;
-        return MAX_STEPS_PER_FRAME;
-    }
-    *carry -= steps;
-    steps as u32
 }
 
 /// Where each main menu option is drawn (also its click and tap area).

@@ -23,16 +23,14 @@ bricks-core = { path = "crates/bricks-core" }
 fastrand = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# Only what 2D games need: no 3D, glTF, gamepads or extra codecs, to keep the
-# browser download small. `webgl2` is the browser backend.
+# What every build needs: the app, window, input, time and log. The renderer
+# is added for the desktop only (see `crates/sandbox-ui/Cargo.toml`); the
+# browser shows the games with a 2D canvas, so its download leaves it out.
 bevy = { version = "=0.20.1", default-features = false, features = [
-    "2d",
-    "bevy_state",
-    "audio",
-    "wav",
-    "webgl2",
-    "x11",
-    "wayland",
+    "std",
+    "async_executor",
+    "bevy_log",
+    "bevy_winit",
 ] }
 
 [workspace.lints.rust]

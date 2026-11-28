@@ -283,8 +283,9 @@ impl Game {
         }
     }
 
-    /// Paint with every active pointer, then advance the physics unless paused.
-    pub fn update(&mut self, paints: &[Paint]) {
+    /// Paint with every active pointer, then advance the physics `steps`
+    /// ticks unless paused (the caller paces steps by time, not frames).
+    pub fn update(&mut self, paints: &[Paint], steps: u32) {
         let Screen::Sandbox(sandbox) = &mut self.screen else {
             return;
         };
@@ -301,7 +302,9 @@ impl Game {
             sandbox.world.paint(x, y, sandbox.brush, tool, fill(tool));
         }
         if !sandbox.paused {
-            sandbox.world.step();
+            for _ in 0..steps {
+                sandbox.world.step();
+            }
         }
     }
 

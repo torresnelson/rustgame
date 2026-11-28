@@ -111,7 +111,7 @@ fn play(
         .into_iter()
         .map(|event| game.handle(event, layout))
         .collect();
-    for _ in 0..game::steps_due(carry, time.delta_secs()) {
+    for _ in 0..sandbox_ui::clock::steps_due(carry, time.delta_secs()) {
         outcomes.push(game.step(held));
     }
     for outcome in outcomes {

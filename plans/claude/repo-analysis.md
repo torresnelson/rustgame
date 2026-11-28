@@ -6,6 +6,9 @@ Bricks) is noted where it matters but not reviewed. Local `main`
 (`b172e03`) is 18 commits behind `master`, the renamed default branch;
 it should be deleted or reset so nobody analyses or branches from it.
 
+Update: PR #11 is merged (`b215d53`) and findings 1 to 3 are fixed on
+the `worktree-repo-analysis` branch; see `repo-analysis.summary.md`.
+
 ## Verdict
 
 A small, tidy, well-tested workspace in good shape. The architecture
@@ -102,6 +105,9 @@ Ordered by impact. Each has a location and a suggested fix.
 
 ### 1. The browser build ships an unused renderer (size)
 
+Status: **fixed** in `worktree-repo-analysis`. Pong 16.57 MB -> 5.10 MB raw,
+5.08 MB -> 1.50 MB gzipped; checked drawing in headless Firefox.
+
 `Cargo.toml` enables bevy's `2d` and `webgl2` features for every target.
 In the browser the renderer is never started (`backends: None`), yet
 wgpu, naga, the sprite and core pipelines and their shaders are all
@@ -117,6 +123,9 @@ time plugins remain.
 
 ### 2. Sand physics speed depends on the frame rate (gameplay)
 
+Status: **fixed**: sand uses the shared `sandbox_ui::clock::steps_due`,
+which also replaces the copies in pong and bricks (PR #11).
+
 `games/sand-simulator/src/game.rs:304` calls `world.step()` once per
 `update`, which runs once per frame. At 120 Hz sand falls twice as fast
 as at 60 Hz, and slow phones simulate slower. Pong already solves this
@@ -128,6 +137,10 @@ with the same per-frame cap so a slow device drops time rather than
 spiralling.
 
 ### 3. Desktop high scores bypass the tested file API (dead code, parity)
+
+Status: **fixed** by deleting `load`/`save`: the Python game keeps its
+file beside its own source (`Path(__file__)`), so no shared desktop file
+is possible.
 
 `tetris-core::highscores::{load, save}` (with the one-time `scores.txt`
 import) are only called by their own tests. The game uses

@@ -47,18 +47,6 @@ fn lose_ball(game: &mut Game) -> Outcome {
 }
 
 #[test]
-fn steps_follow_the_clock_and_cap_slow_frames() {
-    let mut carry = 0.0;
-    assert_eq!(steps_due(&mut carry, 1.0 / 60.0 + 1e-4), 1);
-    let mut carry = 0.0;
-    let frames: Vec<u32> = (0..4)
-        .map(|_| steps_due(&mut carry, 1.0 / 120.0 + 1e-5))
-        .collect();
-    assert_eq!(frames, [0, 1, 0, 1]);
-    assert_eq!(steps_due(&mut carry, 3.0), MAX_STEPS_PER_FRAME);
-}
-
-#[test]
 fn launch_starts_then_sends_the_ball_up() {
     let mut game = playing();
     key(&mut game, Key::Launch);

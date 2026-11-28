@@ -2,8 +2,9 @@
 //! with its 2D context, scaled with hard pixel edges, letterboxed, and
 //! optionally overlaid with scanlines.
 //!
-//! bevy's renderer is not started in the browser (see `game_app`), so the
-//! page canvas has no WebGL context and its 2D context is free to use. The
+//! bevy's renderer is not built for the browser (see `sandbox-ui`'s
+//! `Cargo.toml`), so the page canvas has no WebGL context and its 2D context
+//! is free to use. The
 //! frame goes through an off-page canvas at the game's own size, which the
 //! browser then scales to the page canvas.
 
