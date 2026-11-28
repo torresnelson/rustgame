@@ -303,6 +303,29 @@ fn held_thumb_buttons_repeat_until_released() {
 }
 
 #[test]
+fn a_button_held_through_a_pause_does_not_catch_up_afterwards() {
+    let layout = portrait();
+    let mut game = Game::new(true, 5, Vec::new(), DAY.to_owned(), &layout);
+    game.update(0, &layout);
+    game.handle(Event::Key(Key::Enter), &layout);
+    let right = layout.buttons.iter().find(|b| b.action == "right").unwrap();
+    let id = PointerId::Touch(3);
+    let pos = center(right.rect);
+    let x = play(&mut game).current.x;
+    game.handle(Event::Press { id, pos }, &layout);
+    assert_eq!(play(&mut game).current.x, x + 1);
+    game.handle(Event::Key(Key::Pause), &layout);
+    for t in (100..=2000).step_by(100) {
+        game.update(t, &layout);
+    }
+    game.handle(Event::Key(Key::Pause), &layout);
+    game.update(2010, &layout);
+    assert_eq!(play(&mut game).current.x, x + 1);
+    game.update(2060, &layout); // the next repeat, and only that one
+    assert_eq!(play(&mut game).current.x, x + 2);
+}
+
+#[test]
 fn pause_freezes_the_piece_and_a_board_tap_resumes() {
     let (mut game, layout) = playing(0);
     game.handle(Event::Key(Key::Pause), &layout);
