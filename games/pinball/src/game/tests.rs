@@ -35,13 +35,11 @@ fn button(layout: &Layout, action: &str) -> (i32, i32) {
     center(button.rect)
 }
 
-/// Drop the ball into the drain and step until it is gone.
+/// Drop the ball into the drain, its ball save used up, and step until it
+/// is gone.
 fn drain(game: &mut Game) -> Outcome {
-    game.field.in_lane = false;
-    game.field.ball = Ball {
-        pos: Vec2::new(138.0, 470.0),
-        vel: Vec2::new(0.0, 4.0),
-    };
+    game.field.save = 0;
+    drop_ball(game);
     for _ in 0..30 {
         let outcome = game.step(NOTHING);
         if game.field.ball_ready() || game.phase == Phase::Over {
@@ -49,6 +47,31 @@ fn drain(game: &mut Game) -> Outcome {
         }
     }
     panic!("the ball never drained");
+}
+
+/// Put the ball just over the drain, falling.
+fn drop_ball(game: &mut Game) {
+    game.field.in_lane = false;
+    game.field.ball = Ball {
+        pos: Vec2::new(138.0, 470.0),
+        vel: Vec2::new(0.0, 4.0),
+    };
+}
+
+#[test]
+fn a_ball_drained_early_is_saved_with_a_banner() {
+    let mut game = playing();
+    drop_ball(&mut game);
+    for _ in 0..30 {
+        game.step(NOTHING);
+    }
+    assert_eq!(game.field.balls, START_BALLS);
+    assert!(game.field.ball_ready());
+    assert_eq!(
+        game.banner.as_ref().map(|b| b.0.as_str()),
+        Some("BALL SAVED")
+    );
+    assert!(game.take_sounds().contains(&"saved"));
 }
 
 #[test]
@@ -239,6 +262,8 @@ fn every_screen_draws_in_both_layouts() {
         game.field.lanes = [true, false, true];
         game.field.bumper_flash = [3, 0, 0];
         game.field.sling_flash = [0, 3];
+        game.field.shuttle_flash = 3;
+        game.field.targets_down = [false, true, false];
         game.field.multiplier = 5;
         game.draw(&mut canvas, &layout);
         let (x, y) = layout.to_canvas(game.field.ball.pos);
@@ -269,8 +294,12 @@ fn every_sound_the_game_plays_exists_and_is_audible() {
         Sound::Sling,
         Sound::Lane,
         Sound::Bonus,
+        Sound::Shuttle,
+        Sound::Target,
+        Sound::Targets,
         Sound::Knock,
         Sound::Drain,
+        Sound::Saved,
     ];
     let played = table.map(sound_name);
     for name in played.iter().chain(&["start", "over"]) {

@@ -56,6 +56,40 @@ pub fn sounds() -> Vec<(&'static str, Vec<f32>)> {
                 note(THIN, (1047.0, 1047.0), 0.16, (0.3, 0.0)),
             ]),
         ),
+        // A springy boing that bends up.
+        (
+            "shuttle",
+            render(&[
+                note(SQUARE, (220.0, 660.0), 0.06, (0.3, 0.3)),
+                note(SQUARE, (660.0, 440.0), 0.06, (0.3, 0.0)),
+            ]),
+        ),
+        // A clack: a click of noise and a low thud.
+        (
+            "target",
+            render(&[
+                note(Wave::Noise, (4000.0, 2000.0), 0.015, (0.4, 0.2)),
+                note(PULSE, (220.0, 140.0), 0.05, (0.3, 0.0)),
+            ]),
+        ),
+        // A quick run up and down and up again.
+        (
+            "targets",
+            render(&[
+                note(PULSE, (784.0, 784.0), 0.06, (0.3, 0.3)),
+                note(PULSE, (988.0, 988.0), 0.06, (0.3, 0.3)),
+                note(PULSE, (784.0, 784.0), 0.06, (0.3, 0.3)),
+                note(PULSE, (1175.0, 1175.0), 0.16, (0.3, 0.0)),
+            ]),
+        ),
+        // Relief: a falling slide caught by a rising one.
+        (
+            "saved",
+            render(&[
+                note(Wave::Triangle, (660.0, 330.0), 0.15, (0.45, 0.4)),
+                note(Wave::Triangle, (330.0, 880.0), 0.2, (0.4, 0.0)),
+            ]),
+        ),
         (
             "knock",
             render(&[note(Wave::Noise, (900.0, 400.0), 0.04, (0.25, 0.0))]),

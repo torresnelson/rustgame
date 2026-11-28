@@ -1,6 +1,7 @@
 //! Pinball rules with no engine code: a ball under gravity on a walled
-//! table, two flippers, a plunger lane, pop bumpers, slingshots and three
-//! rollover lanes. All speeds are per 1/60 s step; positions are table
+//! table, two flippers, a plunger lane, pop bumpers, slingshots, three
+//! rollover lanes, a bumper that shuttles across the top, a bank of drop
+//! targets and a ball save. All speeds are per 1/60 s step; positions are table
 //! pixels, origin top-left, `y` growing downwards.
 //!
 //! Walls are line segments and the ball a circle; it moves in substeps
@@ -12,14 +13,16 @@ use std::ops::{Add, AddAssign, Mul, Sub};
 pub const WIDTH: f32 = 300.0;
 pub const HEIGHT: f32 = 480.0;
 pub const BALL_RADIUS: f32 = 5.0;
-pub const GRAVITY: f32 = 0.2;
-pub const MAX_SPEED: f32 = 15.0;
+/// A heavy ball: low gravity and a low top speed keep play slow enough
+/// to follow.
+pub const GRAVITY: f32 = 0.12;
+pub const MAX_SPEED: f32 = 12.0;
 /// Speed kept each step (air and rolling friction).
 const DRAG: f32 = 0.999;
 /// The ball and the flippers move at most this far between contact checks.
 const MAX_SUBSTEP: f32 = 2.0;
-const WALL_BOUNCE: f32 = 0.45;
-const FLIPPER_BOUNCE: f32 = 0.3;
+const WALL_BOUNCE: f32 = 0.35;
+const FLIPPER_BOUNCE: f32 = 0.2;
 /// Slower contacts than this do not bounce, so the ball can rest and roll.
 const REST_SPEED: f32 = 0.6;
 
@@ -40,13 +43,27 @@ pub const PLUNGER_X: f32 = 288.0;
 /// Steps to pull the plunger all the way back.
 pub const PLUNGER_STEPS: f32 = 45.0;
 /// Launch speed with the plunger barely and fully pulled.
-pub const LAUNCH_MIN: f32 = 10.0;
-pub const LAUNCH_MAX: f32 = 15.0;
+pub const LAUNCH_MIN: f32 = 8.0;
+pub const LAUNCH_MAX: f32 = 12.0;
 
 pub const BUMPER_RADIUS: f32 = 14.0;
 pub const BUMPERS: [(f32, f32); 3] = [(88.0, 150.0), (188.0, 150.0), (138.0, 205.0)];
-pub const BUMPER_KICK: f32 = 6.0;
-pub const SLING_KICK: f32 = 4.0;
+pub const BUMPER_KICK: f32 = 4.5;
+pub const SLING_KICK: f32 = 3.2;
+/// The shuttle: a small bumper sliding between the lanes and the bumpers.
+pub const SHUTTLE_Y: f32 = 104.0;
+pub const SHUTTLE_RANGE: (f32, f32) = (70.0, 206.0);
+pub const SHUTTLE_RADIUS: f32 = 10.0;
+/// Pixels the shuttle slides per step.
+pub const SHUTTLE_SPEED: f32 = 0.8;
+pub const SHUTTLE_KICK: f32 = 4.0;
+/// Drop targets: stretches of the left wall, top and bottom `y`, top to
+/// bottom. A hit at least `TARGET_SPEED` fast knocks one down; the wall
+/// bounces the ball either way, so the table's shape never changes.
+pub const TARGETS: [(f32, f32); 3] = [(186.0, 206.0), (214.0, 234.0), (242.0, 262.0)];
+pub const TARGET_SPEED: f32 = 1.0;
+/// Steps a new ball is saved for once it leaves the plunger lane.
+pub const SAVE_STEPS: u32 = 600;
 /// Rollover lane centres, and the band they sense the ball in.
 pub const LANES: [f32; 3] = [78.0, 138.0, 198.0];
 pub const LANE_TOP: f32 = 30.0;
@@ -61,6 +78,9 @@ pub const BUMPER_POINTS: u32 = 100;
 pub const SLING_POINTS: u32 = 10;
 pub const LANE_POINTS: u32 = 50;
 pub const LANES_BONUS: u32 = 1000;
+pub const SHUTTLE_POINTS: u32 = 250;
+pub const TARGET_POINTS: u32 = 200;
+pub const TARGETS_BONUS: u32 = 2000;
 
 pub type Line = ((f32, f32), (f32, f32));
 
@@ -240,19 +260,30 @@ pub enum Sound {
     Lane,
     /// All three lanes lit.
     Bonus,
+    Shuttle,
+    /// A drop target went down.
+    Target,
+    /// The last standing target went down.
+    Targets,
     /// The ball hit a wall hard (at most once a step).
     Knock,
     Drain,
+    /// The ball drained while the ball save was on.
+    Saved,
 }
 
 /// Wall hits at least this fast (px/step, into the wall) knock.
-pub const KNOCK_SPEED: f32 = 4.0;
+pub const KNOCK_SPEED: f32 = 3.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Event {
     Nothing,
     /// All three lanes lit: the multiplier went up.
     Bonus,
+    /// All three targets down: a bonus, and they stand up again.
+    Targets,
+    /// The ball drained during the ball save and waits on the plunger.
+    Saved,
     /// The ball drained; the next one waits on the plunger.
     Drained,
     /// The last ball drained.
@@ -276,6 +307,15 @@ pub struct Field {
     /// Steps each bumper and slingshot stays lit.
     pub bumper_flash: [u32; 3],
     pub sling_flash: [u32; 2],
+    /// The shuttle's centre and its step (negative going left).
+    pub shuttle: Vec2,
+    pub shuttle_step: f32,
+    pub shuttle_flash: u32,
+    /// Targets knocked down.
+    pub targets_down: [bool; 3],
+    /// Steps left of the ball save; it counts down once the ball is out
+    /// of the plunger lane.
+    pub save: u32,
     /// Sounds since the game last took them ([`Field::take_sounds`]).
     pub sounds: Vec<Sound>,
     /// The lane the ball is passing through, so each pass counts once.
@@ -303,6 +343,11 @@ impl Field {
             balls: START_BALLS,
             bumper_flash: [0; 3],
             sling_flash: [0; 2],
+            shuttle: Vec2::new((SHUTTLE_RANGE.0 + SHUTTLE_RANGE.1) / 2.0, SHUTTLE_Y),
+            shuttle_step: SHUTTLE_SPEED,
+            shuttle_flash: 0,
+            targets_down: [false; 3],
+            save: SAVE_STEPS,
             sounds: Vec::new(),
             lane_inside: None,
             knock: 0.0,
@@ -347,8 +392,13 @@ impl Field {
             flipper.raised = up;
         }
         self.knock = 0.0;
-        for flash in self.bumper_flash.iter_mut().chain(&mut self.sling_flash) {
+        let flashes = self.bumper_flash.iter_mut().chain(&mut self.sling_flash);
+        for flash in flashes.chain([&mut self.shuttle_flash]) {
             *flash = flash.saturating_sub(1);
+        }
+        self.move_shuttle();
+        if !self.in_lane {
+            self.save = self.save.saturating_sub(1);
         }
 
         if self.ball_ready() {
@@ -381,7 +431,7 @@ impl Field {
         for _ in 0..parts as u32 {
             if let Some(happened) = self.substep(parts, swings) {
                 event = happened;
-                if event != Event::Bonus {
+                if matches!(event, Event::Drained | Event::Saved | Event::GameOver) {
                     return event;
                 }
             }
@@ -405,6 +455,15 @@ impl Field {
         }
     }
 
+    /// Slide the shuttle one step, turning at the ends of its range.
+    fn move_shuttle(&mut self) {
+        let x = self.shuttle.x + self.shuttle_step;
+        if !(SHUTTLE_RANGE.0..=SHUTTLE_RANGE.1).contains(&x) {
+            self.shuttle_step = -self.shuttle_step;
+        }
+        self.shuttle.x = x.clamp(SHUTTLE_RANGE.0, SHUTTLE_RANGE.1);
+    }
+
     fn limit_speed(&mut self) {
         let speed = self.ball.vel.length();
         if speed > MAX_SPEED {
@@ -418,6 +477,7 @@ impl Field {
         }
         self.ball.pos += self.ball.vel * (1.0 / parts);
 
+        let event = self.hit_targets();
         for &wall in &WALLS {
             let impact = self.hit_wall(wall, WALL_BOUNCE);
             self.knock = self.knock.max(impact);
@@ -434,8 +494,15 @@ impl Field {
                 self.sounds.push(Sound::Sling);
             }
         }
-        for i in 0..BUMPERS.len() {
-            if self.hit_bumper(i) {
+        let surface = Vec2::new(self.shuttle_step, 0.0);
+        if self.hit_round(self.shuttle, SHUTTLE_RADIUS, surface, SHUTTLE_KICK) {
+            self.shuttle_flash = FLASH_STEPS;
+            self.add(SHUTTLE_POINTS);
+            self.sounds.push(Sound::Shuttle);
+        }
+        for (i, &bumper) in BUMPERS.iter().enumerate() {
+            let still = Vec2::default();
+            if self.hit_round(bumper.into(), BUMPER_RADIUS, still, BUMPER_KICK) {
                 self.bumper_flash[i] = FLASH_STEPS;
                 self.add(BUMPER_POINTS);
                 self.sounds.push(Sound::Bumper);
@@ -451,7 +518,41 @@ impl Field {
         if self.ball.pos.y > HEIGHT + BALL_RADIUS {
             return Some(self.drain());
         }
-        self.roll_over_lanes().then_some(Event::Bonus)
+        if self.roll_over_lanes() {
+            return Some(Event::Bonus);
+        }
+        event
+    }
+
+    /// Knock down a standing target the ball is crossing into the left
+    /// wall at, before the wall bounces it.
+    fn hit_targets(&mut self) -> Option<Event> {
+        let Ball { pos, vel } = self.ball;
+        if pos.x >= BALL_RADIUS || vel.x > -TARGET_SPEED {
+            return None;
+        }
+        let i = TARGETS
+            .iter()
+            .position(|&(top, bottom)| (top..=bottom).contains(&pos.y))?;
+        if self.targets_down[i] {
+            return None;
+        }
+        self.drop_target(i)
+    }
+
+    /// Knock target `i` down; when it was the last, score the bank and
+    /// stand all three up again.
+    fn drop_target(&mut self, i: usize) -> Option<Event> {
+        self.targets_down[i] = true;
+        self.add(TARGET_POINTS);
+        self.sounds.push(Sound::Target);
+        if !self.targets_down.iter().all(|&down| down) {
+            return None;
+        }
+        self.targets_down = [false; 3];
+        self.add(TARGETS_BONUS);
+        self.sounds.push(Sound::Targets);
+        Some(Event::Targets)
     }
 
     /// Push the ball out of a wall and bounce it; the speed it hit at (0
@@ -493,17 +594,18 @@ impl Field {
         }
     }
 
-    fn hit_bumper(&mut self, i: usize) -> bool {
-        let center = Vec2::from(BUMPERS[i]);
-        let reach = BALL_RADIUS + BUMPER_RADIUS;
+    /// A round bumper at `center` moving at `surface` kicks the ball away
+    /// at `kick` at least; true on a hit.
+    fn hit_round(&mut self, center: Vec2, radius: f32, surface: Vec2, kick: f32) -> bool {
+        let reach = BALL_RADIUS + radius;
         if (self.ball.pos - center).length() >= reach {
             return false;
         }
-        self.contact(center, reach, Vec2::default(), WALL_BOUNCE);
+        self.contact(center, reach, surface, WALL_BOUNCE);
         let normal = (self.ball.pos - center) * (1.0 / reach);
         let away = self.ball.vel.dot(normal);
-        if away < BUMPER_KICK {
-            self.ball.vel += normal * (BUMPER_KICK - away);
+        if away < kick {
+            self.ball.vel += normal * (kick - away);
         }
         true
     }
@@ -546,15 +648,22 @@ impl Field {
     }
 
     fn drain(&mut self) -> Event {
+        self.ball = Ball::on_plunger();
+        self.in_lane = true;
+        self.plunger = 0.0;
+        if self.save > 0 {
+            // A saved ball is not saved again.
+            self.save = 0;
+            self.sounds.push(Sound::Saved);
+            return Event::Saved;
+        }
+        self.save = SAVE_STEPS;
         self.balls -= 1;
         self.sounds.push(Sound::Drain);
         self.multiplier = 1;
         if self.balls == 0 {
             return Event::GameOver;
         }
-        self.ball = Ball::on_plunger();
-        self.in_lane = true;
-        self.plunger = 0.0;
         Event::Drained
     }
 }

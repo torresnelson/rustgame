@@ -4,8 +4,8 @@
 
 use pinball_core::{
     BALL_RADIUS, BUMPER_RADIUS, BUMPERS, Event as FieldEvent, FLIPPER_RADIUS, Field, GATE,
-    HEIGHT as TABLE_H, Held, LANES, Line, PLUNGER_Y, SLINGS, START_BALLS, Sound, Vec2, WALLS,
-    WIDTH as TABLE_W,
+    HEIGHT as TABLE_H, Held, LANES, Line, PLUNGER_Y, SHUTTLE_RADIUS, SLINGS, START_BALLS, Sound,
+    TARGETS, Vec2, WALLS, WIDTH as TABLE_W,
 };
 use pixelfont::Rect;
 use sandbox_ui::widgets::{
@@ -27,6 +27,8 @@ const BUMPER: Rgb = (0, 88, 248);
 const FLIPPER: Rgb = (216, 40, 0);
 const LANE_OFF: Rgb = (40, 40, 64);
 const PLUNGER: Rgb = (188, 188, 188);
+const SHUTTLE: Rgb = (0, 168, 0);
+const TARGET: Rgb = (248, 120, 88);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Key {
@@ -50,8 +52,12 @@ pub fn sound_name(sound: Sound) -> &'static str {
         Sound::Sling => "sling",
         Sound::Lane => "lane",
         Sound::Bonus => "bonus",
+        Sound::Shuttle => "shuttle",
+        Sound::Target => "target",
+        Sound::Targets => "targets",
         Sound::Knock => "knock",
         Sound::Drain => "drain",
+        Sound::Saved => "saved",
     }
 }
 
@@ -246,6 +252,8 @@ impl Game {
                 let text = format!("BONUS X{}", self.field.multiplier);
                 self.banner = Some((text, until));
             }
+            FieldEvent::Targets => self.banner = Some(("TARGETS!".to_string(), until)),
+            FieldEvent::Saved => self.banner = Some(("BALL SAVED".to_string(), until)),
             FieldEvent::Drained => {
                 let ball = START_BALLS - self.field.balls + 1;
                 self.banner = Some((format!("BALL {ball}"), until));
@@ -418,6 +426,32 @@ impl Game {
             let color = if field.sling_flash[i] > 0 { WHITE } else { RED };
             let (a, b) = layout.line(sling);
             fill_capsule(canvas, a, b, 2.5, color);
+        }
+        // Drop targets: blocks on the left wall, a dim line once down.
+        for (i, &(top, bottom)) in TARGETS.iter().enumerate() {
+            let (x, y) = layout.to_canvas(Vec2::new(0.0, top));
+            let (x, y, h) = (x as i32, y as i32, (bottom - top) as i32);
+            if field.targets_down[i] {
+                canvas.fill_rect(Rect::new(x, y, 2, h), DIM);
+            } else {
+                canvas.fill_rect(Rect::new(x, y, 5, h), TARGET);
+                canvas.fill_rect(Rect::new(x + 4, y, 1, h), WHITE);
+            }
+        }
+        let at = layout.to_canvas(field.shuttle);
+        let lit = field.shuttle_flash > 0;
+        fill_disc(
+            canvas,
+            at,
+            SHUTTLE_RADIUS,
+            if lit { WHITE } else { SHUTTLE },
+        );
+        fill_disc(canvas, at, 4.0, if lit { GOLD } else { WHITE });
+        // The ball save light between the flippers, blinking near the end.
+        let ending = field.save < 120 && (self.steps / 8).is_multiple_of(2);
+        if field.save > 0 && !ending {
+            let (x, y) = layout.to_canvas(Vec2::new(138.0, 460.0));
+            centered(canvas, "SAVE", (x as i32, y as i32), GREEN, 1);
         }
         for (i, &bumper) in BUMPERS.iter().enumerate() {
             let at = layout.to_canvas(bumper.into());
