@@ -74,5 +74,5 @@ It needs `wasm-bindgen` (the version in `Cargo.lock`) and, optionally,
 `wasm-opt` from binaryen for a smaller download. Each game is about 5 MB
 compressed.
 
-Every push to `main` runs `.github/workflows/ci.yml` (format, clippy, tests,
+Every push to `master` runs `.github/workflows/ci.yml` (format, clippy, tests,
 wasm build) and `.github/workflows/pages.yml`, which publishes the site.
