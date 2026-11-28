@@ -187,6 +187,48 @@ fn board_runs_steps_and_stops_when_everything_dies() {
 }
 
 #[test]
+fn running_keeps_the_chosen_speed_at_60_hz() {
+    let layout = landscape();
+    let mut game = Game::new(false, 1);
+    game.handle(Event::Key(Key::Down), &layout);
+    game.handle(Event::Key(Key::Down), &layout); // blinker: lives forever
+    game.handle(Event::Key(Key::Enter), &layout);
+    game.handle(Event::Key(Key::Space), &layout);
+    for faster in [0, 1] {
+        // 10/s, then 20/s: generations only start on a frame (16.67 ms).
+        for _ in 0..faster {
+            game.handle(Event::Key(Key::Faster), &layout);
+        }
+        let speed = SPEEDS[board(&game).speed];
+        let start = board(&game).generation;
+        let offset = 100_000 * (faster + 1);
+        for frame in 0..=600 {
+            game.update(offset + frame * 1000 / 60);
+        }
+        let generations = u64::from(board(&game).generation - start);
+        // 10 seconds; the first frame counts as a generation too.
+        assert!(
+            (10 * speed..=10 * speed + 1).contains(&generations),
+            "{speed}/s ran {generations} generations in 10 s"
+        );
+    }
+}
+
+#[test]
+fn a_stalled_tab_does_not_fast_forward() {
+    let layout = landscape();
+    let mut game = Game::new(false, 1);
+    game.handle(Event::Key(Key::Down), &layout);
+    game.handle(Event::Key(Key::Down), &layout);
+    game.handle(Event::Key(Key::Enter), &layout);
+    game.handle(Event::Key(Key::Space), &layout);
+    game.update(1000);
+    game.update(60_000); // a minute later: one generation, not 590
+    game.update(60_017);
+    assert_eq!(board(&game).generation, 2);
+}
+
+#[test]
 fn tapping_cells_toggles_them_only_while_paused() {
     let layout = landscape();
     let mut game = Game::new(false, 1);

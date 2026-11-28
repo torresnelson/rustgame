@@ -249,10 +249,42 @@ fn parse_args(
     Ok((site, games))
 }
 
+/// The version of package `name` in a `Cargo.lock`.
+fn locked_version(lock: &str, name: &str) -> Option<String> {
+    let header = format!("name = \"{name}\"");
+    let mut lines = lock.lines();
+    lines.find(|line| *line == header)?;
+    let version = lines.next()?.strip_prefix("version = \"")?;
+    Some(version.strip_suffix('"')?.to_owned())
+}
+
+/// `Ok` when `installed` (`wasm-bindgen --version` output, if it ran) is
+/// the locked version; otherwise how to install the right one.
+fn check_bindgen(installed: Option<&str>, locked: &str) -> Result<(), String> {
+    let install = format!("cargo install wasm-bindgen-cli --version {locked} --locked");
+    match installed.and_then(|output| output.split_whitespace().nth(1)) {
+        Some(version) if version == locked => Ok(()),
+        Some(version) => Err(format!(
+            "wasm-bindgen {version} is installed but Cargo.lock has {locked}; run: {install}"
+        )),
+        None => Err(format!("wasm-bindgen is not installed; run: {install}")),
+    }
+}
+
+/// Fail before the long build if wasm-bindgen would reject its output.
+fn ensure_bindgen(root: &Path) -> Result<(), String> {
+    let lock = fs::read_to_string(root.join("Cargo.lock")).map_err(|error| error.to_string())?;
+    let locked = locked_version(&lock, "wasm-bindgen").ok_or("no wasm-bindgen in Cargo.lock")?;
+    let output = Command::new("wasm-bindgen").arg("--version").output().ok();
+    let installed = output.map(|output| String::from_utf8_lossy(&output.stdout).into_owned());
+    check_bindgen(installed.as_deref(), &locked)
+}
+
 fn build_web(args: &[String]) -> Result<(), String> {
     let root = root();
     let cwd = std::env::current_dir().map_err(|error| error.to_string())?;
     let (site, games) = parse_args(args, &root, &cwd)?;
+    ensure_bindgen(&root)?;
     let read =
         |name: &str| fs::read_to_string(root.join("web").join(name)).map_err(|e| e.to_string());
     let (game_template, landing_template) = (read("game.html")?, read("landing.html")?);

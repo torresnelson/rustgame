@@ -47,6 +47,10 @@ fn game_page_has_the_canvas_loading_screen_and_phone_settings() {
     assert!(html.contains("touch-action: none"));
     // `?debug` shows the log on screen, for phones without developer tools.
     assert!(html.contains(".has('debug')"));
+    // The wasm reaches `init` as a stream, so the browser compiles while it
+    // downloads; wasm-bindgen streams only `application/wasm` responses.
+    assert!(html.contains("new Response(counted"));
+    assert!(html.contains("'Content-Type': 'application/wasm'"));
 }
 
 #[test]
@@ -94,6 +98,32 @@ fn commands_build_bind_and_optimise() {
     let optimise = optimise_command(Path::new("/site/x/game_bg.wasm"));
     assert_eq!(&optimise[..2], ["wasm-opt", "-Oz"]);
     assert!(optimise.contains(&"--enable-reference-types".to_owned()));
+}
+
+#[test]
+fn locked_version_reads_the_lockfile() {
+    let lock = "[[package]]\nname = \"wasm-bindgen\"\nversion = \"0.2.130\"\n\
+                [[package]]\nname = \"wasm-bindgen-shared\"\nversion = \"0.2.130\"\n";
+    assert_eq!(
+        locked_version(lock, "wasm-bindgen").as_deref(),
+        Some("0.2.130")
+    );
+    assert_eq!(locked_version(lock, "serde"), None);
+    // The real lockfile has it (Pages installs the CLI from the same line).
+    let real = fs::read_to_string(root().join("Cargo.lock")).unwrap();
+    assert!(locked_version(&real, "wasm-bindgen").is_some());
+}
+
+#[test]
+fn check_bindgen_names_the_install_command() {
+    assert_eq!(
+        check_bindgen(Some("wasm-bindgen 0.2.130\n"), "0.2.130"),
+        Ok(())
+    );
+    let old = check_bindgen(Some("wasm-bindgen 0.2.100\n"), "0.2.130").unwrap_err();
+    assert!(old.contains("0.2.100") && old.contains("--version 0.2.130 --locked"));
+    let missing = check_bindgen(None, "0.2.130").unwrap_err();
+    assert!(missing.contains("not installed"));
 }
 
 #[test]

@@ -6,8 +6,8 @@ Bricks) is noted where it matters but not reviewed. Local `main`
 (`b172e03`) is 18 commits behind `master`, the renamed default branch;
 it should be deleted or reset so nobody analyses or branches from it.
 
-Update: PR #11 is merged (`b215d53`) and findings 1 to 3 are fixed on
-the `worktree-repo-analysis` branch; see `repo-analysis.summary.md`.
+Update: PR #11 is merged (`b215d53`), findings 1 to 3 are fixed by PR
+#12 (`22681fa`) and 4 to 9 by PR #13; see `repo-analysis.summary.md`.
 
 ## Verdict
 
@@ -157,6 +157,9 @@ Fix, either:
 
 ### 4. Game of Life loses time between generations (minor)
 
+Status: **fixed** in PR #13: the clock advances by one interval per
+generation and resets only when a whole interval behind.
+
 `games/game-of-life/src/game.rs:365` sets `last_step_ms = now_ms`, which
 discards how late the step was. A generation only fires on a frame, so
 every step is up to one frame late and the lateness never comes back:
@@ -167,11 +170,18 @@ far behind) keeps the speed shown in the status bar.
 
 ### 5. Pages can deploy a build CI rejected (process)
 
+Status: **fixed** in PR #13: Pages runs on `workflow_run` of a successful
+CI on `master`, building the commit CI checked.
+
 `pages.yml` and `ci.yml` both run on push to `master` independently. A
 merge that fails clippy or tests still publishes. Fix: run Pages on
 `workflow_run` of CI succeeding, or add the test step to the Pages job.
 
 ### 6. `wasm-bindgen-cli` version is duplicated (fragile)
+
+Status: **fixed** in PR #13: Pages reads the version from `Cargo.lock`,
+and `cargo xtask build-web` stops early with the install command when the
+installed CLI differs.
 
 `.github/workflows/pages.yml:40` hard-codes `0.2.130`, which must match
 `Cargo.lock`. A `cargo update` breaks Pages with a schema-mismatch
@@ -182,6 +192,8 @@ nixpkgs, which has the same problem locally.
 
 ### 7. The loader gives up streaming compilation (load time)
 
+Status: **fixed** in PR #13 as suggested.
+
 `web/game.html:154` buffers the whole wasm for the progress bar, then
 `init({ module_or_path: bytes })` compiles it. Wrapping the progress
 reader in a `new Response(stream, { headers: { 'content-type':
@@ -191,6 +203,9 @@ is fixed and the network part is shorter.
 
 ### 8. The browser display redraws unchanged frames (efficiency)
 
+Status: **fixed** in PR #13 (the display half): no upload when the canvas
+is unchanged, no redraw unless it or the page size changed.
+
 `web_display::present` (`crates/sandbox-ui/src/web_display.rs:144`) runs
 `putImageData` and two `drawImage`s every frame and reads
 `devicePixelRatio`/client size each time. The desktop path checks
@@ -199,6 +214,12 @@ both sides; the cheap half is skipping the work when neither the canvas
 nor the page size changed.
 
 ### 9. Stale names and small inconsistencies (hygiene)
+
+Status: **fixed** in PR #13 where a change was due: saves move to
+`rustgame/` (the old folder still loads), names updated, `shell.nix`
+warns on a toolchain mismatch, `rust-version` is the pinned 1.99.1, the
+viewport setting is documented. No change for the two `allow`s and the
+life `HashSet`, which the finding only flags for later growth.
 
 - The `pygame-sandbox` name survives in `storage.rs:27` (desktop data
   folder), `shell.nix:20` and `sandbox-ui`'s description. The data folder

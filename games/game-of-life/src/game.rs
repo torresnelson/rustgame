@@ -357,12 +357,18 @@ impl Game {
         let Screen::Board(board) = &mut self.screen else {
             return;
         };
-        let due = board.running
-            && now_ms.saturating_sub(board.last_step_ms) >= 1000 / SPEEDS[board.speed];
+        let interval = 1000 / SPEEDS[board.speed];
+        let due = board.running && now_ms.saturating_sub(board.last_step_ms) >= interval;
         if due || board.step_once {
             board.cells = next_generation(&board.cells, AMOUNT, AMOUNT);
             board.generation += 1;
-            board.last_step_ms = now_ms;
+            // Keep to the clock: a step that lands a frame late does not
+            // push the next one later. Too far behind (a stalled tab, or a
+            // speed above the frame rate), start counting again from now.
+            board.last_step_ms += interval;
+            if board.step_once || now_ms.saturating_sub(board.last_step_ms) >= interval {
+                board.last_step_ms = now_ms;
+            }
             board.step_once = false;
             // Everything died: go back to editing instead of running empty.
             board.running = board.running && !board.cells.is_empty();

@@ -39,7 +39,8 @@ new to this repository, with their own look; each keeps its best score
   `>` `DOWN` `DROP` sit under the board (left, right and down repeat while
   held). A high score asks for a name on an on-screen keyboard. Keys:
   arrows, enter, space, p, esc. Scores are kept in the browser's local storage, or
-  in `~/.local/share/pygame-sandbox/` on the desktop.
+  in `~/.local/share/rustgame/` on the desktop (saves from the old
+  `pygame-sandbox` folder still load).
 - Sand Simulator: paint with a finger or the left mouse button, erase with
   the right one; the toolbar picks sand, water, stone or the eraser, the
   brush size, pause, clear and menu. Keys: 1-4, [ ], mouse wheel, space, c,

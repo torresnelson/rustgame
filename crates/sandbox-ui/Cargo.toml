@@ -1,6 +1,6 @@
 [package]
 name = "sandbox-ui"
-description = "Shared bevy layer for the pygame sandbox games."
+description = "Shared bevy layer for the rustgame games."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
