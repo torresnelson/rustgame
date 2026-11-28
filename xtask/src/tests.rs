@@ -127,8 +127,8 @@ fn parse_args_picks_games_and_resolves_the_site_from_the_caller() {
 #[test]
 fn parse_args_rejects_unknown_games_and_a_missing_folder() {
     let root = Path::new("/w");
-    let unknown = parse_args(&args(&["snake"]), root, root).unwrap_err();
-    assert!(unknown.contains("unknown game snake"), "{unknown}");
+    let unknown = parse_args(&args(&["asteroids"]), root, root).unwrap_err();
+    assert!(unknown.contains("unknown game asteroids"), "{unknown}");
     assert!(parse_args(&args(&["--site"]), root, root).is_err());
 }
 

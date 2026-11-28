@@ -1,0 +1,18 @@
+[package]
+name = "merge"
+description = "Merge: slide and merge number tiles until one reads 2048."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+bevy.workspace = true
+fastrand.workspace = true
+merge-core.workspace = true
+pixelfont.workspace = true
+sandbox-ui.workspace = true
+touch.workspace = true
+
+[lints]
+workspace = true

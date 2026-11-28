@@ -12,12 +12,21 @@ https://torresnelson.github.io/rustgame/
   paints on its own, so one can paint while another picks a tool.
 - **Pong**: against a computer that levels up as the game goes on, or
   two players on one keyboard; first to three matches of ten points.
+- **Snake**: eat, grow and speed up on a walled 20x20 grid.
+- **Minesweeper**: easy, medium and hard boards; the first opening is
+  always safe, and the best time of each is kept.
+- **Merge**: slide number tiles on a 4x4 board; equal tiles merge, aim for
+  2048.
+- **Bricks**: a paddle, a ball and four levels of bricks, faster every
+  round.
 
 Game of Life, Tetris and Sand Simulator are ports of the Python/pygame
 versions in [torresnelson/pygame](https://github.com/torresnelson/pygame)
 (plan: `plans/claude/rust-rewrite.md`). Pong is a port of the C/raylib game
 in [torresnelson/pong](https://github.com/torresnelson/pong) (plan:
-`plans/claude/pong-port.md`).
+`plans/claude/pong-port.md`). Snake, Minesweeper, Merge and Bricks are
+new to this repository, with their own look; each keeps its best score
+(best times for Minesweeper) like Tetris keeps its table.
 
 ## Controls
 
@@ -44,10 +53,23 @@ in [torresnelson/pong](https://github.com/torresnelson/pong) (plan:
   half up, bottom half down), the button at the top centre pauses, and a
   tap continues.
 
-In Game of Life, Tetris and Sand Simulator, a phone held upright gets a
-portrait layout with bigger buttons, and the game follows the phone when
-it is turned; on the desktop, `--portrait` opens that layout. Pong is
-landscape only.
+- Snake: arrows or WASD turn, enter starts, space or p pauses, esc ends
+  the game. Swipe anywhere to turn and tap to start or go on; held
+  upright, thumb buttons sit under the board.
+- Minesweeper: pick a board with up/down + enter, 1 2 3, or a tap. Click
+  or tap digs, right click or a held finger flags; DIG/FLAG swaps the two
+  for taps. Digging an open number whose flags are all placed opens its
+  other neighbours. Keys: arrows move a cursor, enter or space dig, f, n,
+  esc.
+- Merge: arrows or WASD slide, or swipe anywhere; NEW (or n) starts over.
+- Bricks: left/right, A/D or the mouse move the paddle; space, enter, up
+  or a click launch the ball, p pauses. On a phone drag anywhere to move
+  the paddle (upright, there is a strip under the field for it) and tap
+  to launch.
+
+In every game but Pong, a phone held upright gets a portrait layout with
+bigger buttons, and the game follows the phone when it is turned; on the
+desktop, `--portrait` opens that layout. Pong is landscape only.
 
 ## Layout
 
@@ -58,7 +80,12 @@ crates/life          Game of Life rules and patterns
 crates/sand          falling-sand physics
 crates/tetris-core   tetris rules and high score table
 crates/pong-core     pong rules and computer opponent
-crates/sandbox-ui    shared bevy layer: pixel canvas, pointers, orientation, saves
+crates/snake-core    snake rules
+crates/mines-core    minesweeper rules: safe first opening, flood, chords
+crates/merge-core    sliding and merging tiles
+crates/bricks-core   paddle, ball and brick physics, levels
+crates/sandbox-ui    shared bevy layer: pixel canvas, pointers, orientation,
+                     saves, 8-bit widgets
 games/*              one bevy app per game
 web/                 page templates (landing page, game page with loading screen)
 xtask/               build tasks (`cargo xtask`, aliased in .cargo/config.toml)
@@ -75,7 +102,8 @@ pinned toolchain (`rust-toolchain.toml`, with the `wasm32-unknown-unknown`
 target) and the browser build tools:
 
     nix-shell
-    cargo run -p game-of-life        # or tetris, sand-simulator, pong
+    cargo run -p game-of-life        # or tetris, sand-simulator, pong,
+                                     # snake, minesweeper, merge, bricks
     cargo test --workspace
 
 On Debian or Ubuntu, install them with rustup and:

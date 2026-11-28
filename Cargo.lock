@@ -2016,6 +2016,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "bricks"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bricks-core",
+ "pixelfont",
+ "sandbox-ui",
+ "touch",
+]
+
+[[package]]
+name = "bricks-core"
+version = "0.1.0"
+dependencies = [
+ "fastrand",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3569,6 +3587,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "merge"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "fastrand",
+ "merge-core",
+ "pixelfont",
+ "sandbox-ui",
+ "touch",
+]
+
+[[package]]
+name = "merge-core"
+version = "0.1.0"
+dependencies = [
+ "fastrand",
+]
+
+[[package]]
+name = "mines-core"
+version = "0.1.0"
+dependencies = [
+ "fastrand",
+]
+
+[[package]]
+name = "minesweeper"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "fastrand",
+ "mines-core",
+ "pixelfont",
+ "sandbox-ui",
+ "touch",
+]
+
+[[package]]
 name = "miniz_oxide"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4935,6 +4991,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd538fb6910ac1099850255cf94a94df6551fbdd602454387d0adb2d1ca6dead"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "snake"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "fastrand",
+ "pixelfont",
+ "sandbox-ui",
+ "snake-core",
+ "touch",
+]
+
+[[package]]
+name = "snake-core"
+version = "0.1.0"
+dependencies = [
+ "fastrand",
 ]
 
 [[package]]

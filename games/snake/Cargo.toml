@@ -1,0 +1,18 @@
+[package]
+name = "snake"
+description = "Snake: eat, grow, and do not bite the walls or yourself."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+bevy.workspace = true
+fastrand.workspace = true
+pixelfont.workspace = true
+sandbox-ui.workspace = true
+snake-core.workspace = true
+touch.workspace = true
+
+[lints]
+workspace = true
