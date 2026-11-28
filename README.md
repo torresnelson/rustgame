@@ -10,10 +10,14 @@ https://torresnelson.github.io/rustgame/
   high scores.
 - **Sand Simulator**: pour sand and water, build stone walls. Every finger
   paints on its own, so one can paint while another picks a tool.
+- **Pong**: against a computer that levels up as the game goes on, or
+  two players on one keyboard; first to three matches of ten points.
 
-They are a port of the Python/pygame versions in
+The first three are a port of the Python/pygame versions in
 [torresnelson/pygame](https://github.com/torresnelson/pygame); the plan is in
-`plans/claude/rust-rewrite.md`.
+`plans/claude/rust-rewrite.md`. Pong is a port of the C/raylib game in
+[torresnelson/pong](https://github.com/torresnelson/pong)
+(`plans/claude/pong-port.md`).
 
 ## Controls
 
@@ -31,10 +35,17 @@ They are a port of the Python/pygame versions in
   the right one; the toolbar picks sand, water, stone or the eraser, the
   brush size, pause, clear and menu. Keys: 1-4, [ ], mouse wheel, space, c,
   esc.
+- Pong: pick ONE PLAYER or TWO PLAYERS with up/down or w/s and enter, 1 or
+  2, a click or a tap. Player one moves with w/s (and the arrows when
+  playing alone), player two with the arrows; space pauses, m goes back
+  to the menu when paused or after a win, enter asks for a rematch, esc
+  quits on the desktop. On a phone, held sideways: the left third of the
+  screen is the paddle controller (top half up, bottom half down), the
+  button at the top centre pauses, and a tap continues.
 
 A phone held upright gets a portrait layout with bigger buttons, and the
-games follow the phone when it is turned. On the desktop, `--portrait`
-opens that layout.
+games follow the phone when it is turned (Pong stays landscape). On the
+desktop, `--portrait` opens that layout.
 
 ## Layout
 
@@ -44,6 +55,7 @@ crates/touch         buttons, gestures, canvas fitting
 crates/life          Game of Life rules and patterns
 crates/sand          falling-sand physics
 crates/tetris-core   tetris rules and high score table
+crates/pong-core     pong rules and computer opponent
 crates/sandbox-ui    shared bevy layer: pixel canvas, pointers, orientation, saves
 games/*              one bevy app per game
 web/                 page templates (landing page, game page with loading screen)
@@ -59,7 +71,7 @@ pinned toolchain (`rust-toolchain.toml`, with the `wasm32-unknown-unknown`
 target):
 
     nix-shell
-    cargo run -p game-of-life        # or tetris, sand-simulator
+    cargo run -p game-of-life        # or tetris, sand-simulator, pong
     cargo test --workspace
 
 The first build compiles bevy and takes several minutes.

@@ -14,6 +14,7 @@ pixelfont = { path = "crates/pixelfont" }
 touch = { path = "crates/touch" }
 life = { path = "crates/life" }
 tetris-core = { path = "crates/tetris-core" }
+pong-core = { path = "crates/pong-core" }
 sand = { path = "crates/sand" }
 fastrand = "2"
 serde = { version = "1", features = ["derive"] }

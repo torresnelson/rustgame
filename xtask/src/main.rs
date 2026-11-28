@@ -10,6 +10,7 @@
 //! site/gameoflife/         Game of Life
 //! site/tetris/             Tetris
 //! site/sandsimulator/      Sand Simulator
+//! site/pong/               Pong
 //! ```
 
 use std::fs;
@@ -39,7 +40,7 @@ struct Game {
     title: &'static str,
 }
 
-const GAMES: [Game; 3] = [
+const GAMES: [Game; 4] = [
     Game {
         path: "gameoflife",
         crate_name: "game-of-life",
@@ -54,6 +55,11 @@ const GAMES: [Game; 3] = [
         path: "sandsimulator",
         crate_name: "sand-simulator",
         title: "Sand Simulator",
+    },
+    Game {
+        path: "pong",
+        crate_name: "pong",
+        title: "Pong",
     },
 ];
 

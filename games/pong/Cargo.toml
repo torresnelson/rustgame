@@ -1,0 +1,17 @@
+[package]
+name = "pong"
+description = "Pong (Rust/bevy port of src/main.c from torresnelson/pong)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+bevy.workspace = true
+fastrand.workspace = true
+pixelfont.workspace = true
+pong-core.workspace = true
+sandbox-ui.workspace = true
+
+[lints]
+workspace = true
