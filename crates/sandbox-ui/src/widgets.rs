@@ -1,5 +1,6 @@
 //! The 8-bit look shared by the newer games (snake, minesweeper, 2048,
-//! bricks): NES-style boxes and buttons, bevelled tiles and checked text.
+//! bricks, pinball): NES-style boxes and buttons, bevelled tiles, discs and
+//! capsules, and checked text.
 //! Tetris keeps its own copies in `games/tetris/src/draw.rs`.
 
 use pixelfont::Rect;
@@ -118,9 +119,61 @@ fn checked(canvas: &Canvas, text: &str, area: Rect) {
     );
 }
 
+/// A filled circle centred on `(x, y)`, one pixel row at a time.
+pub fn fill_disc(canvas: &mut Canvas, (cx, cy): (f32, f32), radius: f32, color: Rgb) {
+    let top = (cy - radius).floor() as i32;
+    let bottom = (cy + radius).ceil() as i32;
+    for y in top..bottom {
+        let dy = y as f32 + 0.5 - cy;
+        if dy.abs() > radius {
+            continue;
+        }
+        let half = (radius * radius - dy * dy).sqrt();
+        let (x0, x1) = ((cx - half).round() as i32, (cx + half).round() as i32);
+        canvas.fill_rect(Rect::new(x0, y, x1 - x0, 1), color);
+    }
+}
+
+/// A thick line with round ends: discs of `radius` from `a` to `b`.
+pub fn fill_capsule(canvas: &mut Canvas, a: (f32, f32), b: (f32, f32), radius: f32, color: Rgb) {
+    let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+    let steps = dx.hypot(dy).ceil().max(1.0) as i32;
+    for i in 0..=steps {
+        let t = i as f32 / steps as f32;
+        fill_disc(canvas, (a.0 + dx * t, a.1 + dy * t), radius, color);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fill_disc_is_round() {
+        let mut canvas = Canvas::new(60, 60);
+        fill_disc(&mut canvas, (30.0, 30.0), 10.0, RED);
+        let lit = (0..60)
+            .flat_map(|y| (0..60).map(move |x| (x, y)))
+            .filter(|&(x, y)| canvas.get(x, y) == Some(RED))
+            .count() as f32;
+        let area = std::f32::consts::PI * 100.0;
+        assert!((lit - area).abs() < area * 0.05, "{lit} pixels");
+        assert_eq!(canvas.get(30, 30), Some(RED));
+        assert_eq!(canvas.get(21, 30), Some(RED));
+        assert_eq!(canvas.get(41, 30), Some(BLACK));
+        // Corners of the bounding box stay empty.
+        assert_eq!(canvas.get(21, 21), Some(BLACK));
+    }
+
+    #[test]
+    fn fill_capsule_joins_the_ends_with_round_caps() {
+        let mut canvas = Canvas::new(40, 20);
+        fill_capsule(&mut canvas, (5.0, 10.0), (35.0, 10.0), 3.0, WHITE);
+        assert_eq!(canvas.get(20, 10), Some(WHITE)); // along the line
+        assert_eq!(canvas.get(3, 10), Some(WHITE)); // round cap past the end
+        assert_eq!(canvas.get(20, 14), Some(BLACK)); // thickness is limited
+        assert_eq!(canvas.get(2, 7), Some(BLACK)); // cap corner stays empty
+    }
 
     #[test]
     fn shade_blends_towards_white_and_black() {

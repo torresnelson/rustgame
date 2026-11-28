@@ -19,13 +19,16 @@ https://torresnelson.github.io/rustgame/
   2048.
 - **Bricks**: a paddle, a ball and four levels of bricks, faster every
   round.
+- **Pinball**: two flippers, a plunger, pop bumpers, slingshots and three
+  rollover lanes that raise the bonus multiplier; three balls a game.
 
 Game of Life, Tetris and Sand Simulator are ports of the Python/pygame
 versions in [torresnelson/pygame](https://github.com/torresnelson/pygame)
 (plan: `plans/claude/rust-rewrite.md`). Pong is a port of the C/raylib game
 in [torresnelson/pong](https://github.com/torresnelson/pong) (plan:
-`plans/claude/pong-port.md`). Snake, Minesweeper, Merge and Bricks are
-new to this repository, with their own look; each keeps its best score
+`plans/claude/pong-port.md`). Snake, Minesweeper, Merge, Bricks and
+Pinball (plan: `plans/claude/pinball.md`) are new to this repository,
+with their own look; each keeps its best score
 (best times for Minesweeper) like Tetris keeps its table.
 
 ## Controls
@@ -67,6 +70,11 @@ new to this repository, with their own look; each keeps its best score
   or a click launch the ball, p pauses. On a phone drag anywhere to move
   the paddle (upright, there is a strip under the field for it) and tap
   to launch.
+- Pinball: left/A/Z and right/D/M (or /) work the flippers, as do the
+  left and right mouse buttons; hold space or down to pull the plunger and
+  let go to launch; p pauses. Each flipper press shifts the lit lanes. On a
+  phone hold either half of the screen for that flipper, and hold LAUNCH
+  for the plunger.
 
 In every game but Pong, a phone held upright gets a portrait layout with
 bigger buttons, and the game follows the phone when it is turned; on the
@@ -85,6 +93,7 @@ crates/snake-core    snake rules
 crates/mines-core    minesweeper rules: safe first opening, flood, chords
 crates/merge-core    sliding and merging tiles
 crates/bricks-core   paddle, ball and brick physics, levels
+crates/pinball-core  pinball physics: flippers, plunger, bumpers, lanes
 crates/sandbox-ui    shared bevy layer: pixel canvas, pointers, orientation,
                      saves, 8-bit widgets
 games/*              one bevy app per game
@@ -104,7 +113,8 @@ target) and the browser build tools:
 
     nix-shell
     cargo run -p game-of-life        # or tetris, sand-simulator, pong,
-                                     # snake, minesweeper, merge, bricks
+                                     # snake, minesweeper, merge, bricks,
+                                     # pinball
     cargo test --workspace
 
 On Debian or Ubuntu, install them with rustup and:

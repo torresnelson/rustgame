@@ -15,6 +15,7 @@
 //! site/minesweeper/        Minesweeper
 //! site/merge/              Merge
 //! site/bricks/             Bricks
+//! site/pinball/            Pinball
 //! ```
 
 use std::ffi::OsString;
@@ -45,7 +46,7 @@ struct Game {
     title: &'static str,
 }
 
-const GAMES: [Game; 8] = [
+const GAMES: [Game; 9] = [
     Game {
         path: "gameoflife",
         crate_name: "game-of-life",
@@ -85,6 +86,11 @@ const GAMES: [Game; 8] = [
         path: "bricks",
         crate_name: "bricks",
         title: "Bricks",
+    },
+    Game {
+        path: "pinball",
+        crate_name: "pinball",
+        title: "Pinball",
     },
 ];
 

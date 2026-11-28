@@ -9,6 +9,7 @@ use pong_core::{
     TOTAL_MATCHES, TouchControl, Vec2, menu_select, referee, reset_game, touch_control_at,
     touch_control_rect,
 };
+use sandbox_ui::widgets::fill_disc;
 use sandbox_ui::{Canvas, Rgb};
 
 pub const WIDTH: i32 = SCREEN_WIDTH as i32;
@@ -299,7 +300,8 @@ impl Game {
         if touch_controls {
             draw_pause_button(canvas, self.state != State::Playing);
         }
-        fill_disc(canvas, self.ball.position, RADIUS, RED);
+        let position = self.ball.position;
+        fill_disc(canvas, (position.x, position.y), RADIUS, RED);
         canvas.fill_rect(rect(self.player1.bar), WHITE);
         canvas.fill_rect(rect(self.player2.bar), BLUE);
 
@@ -458,24 +460,6 @@ fn checked(canvas: &Canvas, text: &str, area: Rect) {
             && area.y + area.h <= canvas.height(),
         "{text:?} at {area:?} leaves the screen"
     );
-}
-
-/// A filled circle, one pixel row at a time.
-pub fn fill_disc(canvas: &mut Canvas, center: Vec2, radius: f32, color: Rgb) {
-    let top = (center.y - radius).floor() as i32;
-    let bottom = (center.y + radius).ceil() as i32;
-    for y in top..bottom {
-        let dy = y as f32 + 0.5 - center.y;
-        if dy.abs() > radius {
-            continue;
-        }
-        let half = (radius * radius - dy * dy).sqrt();
-        let (x0, x1) = (
-            (center.x - half).round() as i32,
-            (center.x + half).round() as i32,
-        );
-        canvas.fill_rect(Rect::new(x0, y, x1 - x0, 1), color);
-    }
 }
 
 /// A triangle with a flat top or bottom edge, one pixel row at a time:

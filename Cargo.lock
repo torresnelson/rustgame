@@ -4395,6 +4395,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c938015719552d665fd0553b90d96cd7ff58e83e4c061ca99e6bb78865a72752"
 
 [[package]]
+name = "pinball"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "pinball-core",
+ "pixelfont",
+ "sandbox-ui",
+ "touch",
+]
+
+[[package]]
+name = "pinball-core"
+version = "0.1.0"
+
+[[package]]
 name = "piper"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

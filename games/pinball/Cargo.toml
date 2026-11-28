@@ -1,0 +1,17 @@
+[package]
+name = "pinball"
+description = "Pinball: two flippers, a plunger, pop bumpers and rollover lanes."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+bevy.workspace = true
+pinball-core.workspace = true
+pixelfont.workspace = true
+sandbox-ui.workspace = true
+touch.workspace = true
+
+[lints]
+workspace = true
