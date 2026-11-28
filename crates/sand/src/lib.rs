@@ -88,13 +88,6 @@ impl World {
             .map(move |(i, &m)| (i as i32 % width, i as i32 / width, Material::from_index(m)))
     }
 
-    /// Number of `material` cells in column `x`.
-    pub fn column_height(&self, x: i32, material: Material) -> usize {
-        (0..self.height)
-            .filter(|&y| self.material[self.index(x, y)] == material as u8)
-            .count()
-    }
-
     // -- editing ----------------------------------------------------------
 
     pub fn set(&mut self, x: i32, y: i32, material: Material) {
@@ -226,7 +219,9 @@ impl World {
             y += 1;
             fallen += 1;
         }
-        if fallen == budget {
+        // Sinking into a liquid can lower the budget below what has already
+        // been fallen; the particle is still moving, not landed.
+        if fallen >= budget {
             self.velocity[i] = speed;
             return (y, i, 0.0);
         }

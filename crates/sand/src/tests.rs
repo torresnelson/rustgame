@@ -27,6 +27,13 @@ fn ys(world: &World, material: Material) -> Vec<i32> {
         .collect()
 }
 
+/// Number of `material` cells in column `x`.
+fn column_height(world: &World, x: i32, material: Material) -> usize {
+    (0..world.height)
+        .filter(|&y| world.get(x, y) == material)
+        .count()
+}
+
 // -- materials ----------------------------------------------------------------
 
 #[test]
@@ -165,7 +172,7 @@ fn sand_pile_has_slopes_not_a_tower() {
             world.step();
         }
         settle(&mut world);
-        let heights: Vec<usize> = (0..width).map(|x| world.column_height(x, SAND)).collect();
+        let heights: Vec<usize> = (0..width).map(|x| column_height(&world, x, SAND)).collect();
         assert_eq!(heights.iter().sum::<usize>(), 150);
         let peak = heights
             .iter()
@@ -209,7 +216,9 @@ fn water_levels_out_across_the_floor() {
     for _ in 0..600 {
         world.step();
     }
-    let heights: Vec<usize> = (0..width).map(|x| world.column_height(x, WATER)).collect();
+    let heights: Vec<usize> = (0..width)
+        .map(|x| column_height(&world, x, WATER))
+        .collect();
     assert_eq!(heights.iter().sum::<usize>(), 30);
     assert!(
         heights.iter().max().unwrap() - heights.iter().min().unwrap() <= 1,
@@ -247,6 +256,22 @@ fn sand_falls_slower_in_water() {
         ys(&world, SAND)[0]
     };
     assert!(distance_after(12, WATER) < distance_after(12, EMPTY_M));
+}
+
+#[test]
+fn fast_grain_entering_water_keeps_sinking() {
+    // Falling at full speed, the grain reaches the water after two cells; the
+    // drag then caps its speed, but it is still moving, not landed.
+    let mut world = make(1, 20, 0);
+    for y in 3..20 {
+        world.set(0, y, WATER);
+    }
+    world.set(0, 0, SAND);
+    world.velocity[0] = MAX_SPEED;
+    world.step();
+    assert_eq!(ys(&world, SAND), vec![3]);
+    let i = world.width as usize * 3;
+    assert_eq!(world.velocity[i], WATER.props().drag_speed);
 }
 
 // -- conservation ---------------------------------------------------------------
