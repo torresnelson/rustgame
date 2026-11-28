@@ -4,7 +4,7 @@
 
 use pinball_core::{
     BALL_RADIUS, BUMPER_RADIUS, BUMPERS, Event as FieldEvent, FLIPPER_RADIUS, Field, GATE,
-    HEIGHT as TABLE_H, Held, LANES, Line, PLUNGER_Y, SLINGS, START_BALLS, Vec2, WALLS,
+    HEIGHT as TABLE_H, Held, LANES, Line, PLUNGER_Y, SLINGS, START_BALLS, Sound, Vec2, WALLS,
     WIDTH as TABLE_W,
 };
 use pixelfont::Rect;
@@ -36,7 +36,23 @@ pub enum Key {
     Plunger,
     Start,
     Pause,
+    /// Sound on or off.
+    Sound,
     Escape,
+}
+
+/// The sound (in `sounds::sounds`) for something on the table.
+pub fn sound_name(sound: Sound) -> &'static str {
+    match sound {
+        Sound::Flipper => "flipper",
+        Sound::Launch => "launch",
+        Sound::Bumper => "bumper",
+        Sound::Sling => "sling",
+        Sound::Lane => "lane",
+        Sound::Bonus => "bonus",
+        Sound::Knock => "knock",
+        Sound::Drain => "drain",
+    }
 }
 
 /// Input in canvas pixels.
@@ -127,7 +143,7 @@ pub fn landscape() -> Layout {
             "OR THE MOUSE BUTTONS",
             "SPACE OR DOWN: HOLD TO PULL,",
             "LET GO TO LAUNCH",
-            "P: PAUSE",
+            "P: PAUSE, S: SOUND ON/OFF",
             "",
             "TOUCH: HOLD EITHER SIDE",
             "OF THE SCREEN TO FLIP",
@@ -172,6 +188,9 @@ pub struct Game {
     pub steps: u64,
     /// A message over the table until the given step.
     pub banner: Option<(String, u64)>,
+    pub sound_on: bool,
+    /// Sounds to play, oldest first ([`Game::take_sounds`]).
+    sounds: Vec<&'static str>,
     over_step: u64,
     presses: Vec<Press>,
 }
@@ -186,9 +205,16 @@ impl Game {
             new_best: false,
             steps: 0,
             banner: None,
+            sound_on: true,
+            sounds: Vec::new(),
             over_step: 0,
             presses: Vec::new(),
         }
+    }
+
+    /// The sounds to play since the last call, by name.
+    pub fn take_sounds(&mut self) -> Vec<&'static str> {
+        std::mem::take(&mut self.sounds)
     }
 
     /// What is held: the keys, plus every finger and mouse button down.
@@ -208,7 +234,13 @@ impl Game {
             return Outcome::Continue;
         }
         let until = self.steps + BANNER_STEPS;
-        match self.field.step(self.held(keys)) {
+        let event = self.field.step(self.held(keys));
+        let sounds = self.field.take_sounds();
+        // The game over tune stands in for the last drain.
+        let over = event == FieldEvent::GameOver;
+        let sounds = sounds.into_iter().filter(|&s| !(over && s == Sound::Drain));
+        self.sounds.extend(sounds.map(sound_name));
+        match event {
             FieldEvent::Nothing => {}
             FieldEvent::Bonus => {
                 let text = format!("BONUS X{}", self.field.multiplier);
@@ -232,6 +264,12 @@ impl Game {
                 }
             }
             Event::Key(Key::Pause) => self.pause(),
+            Event::Key(Key::Sound) => {
+                self.sound_on = !self.sound_on;
+                if self.sound_on {
+                    self.sounds.push("lane"); // a chime to show it is on
+                }
+            }
             Event::Key(Key::Start | Key::Plunger) if self.phase != Phase::Playing => self.go(),
             Event::Key(Key::Left) => self.flip(Role::Left),
             Event::Key(Key::Right) => self.flip(Role::Right),
@@ -281,13 +319,18 @@ impl Game {
     /// Start, go on or play again, whichever fits the screen.
     fn go(&mut self) {
         match self.phase {
-            Phase::Ready | Phase::Paused => self.phase = Phase::Playing,
+            Phase::Ready => {
+                self.phase = Phase::Playing;
+                self.sounds.push("start");
+            }
+            Phase::Paused => self.phase = Phase::Playing,
             Phase::Playing => {}
             Phase::Over if self.steps >= self.over_step + RESTART_STEPS => {
                 self.field = Field::new();
                 self.phase = Phase::Playing;
                 self.new_best = false;
                 self.banner = None;
+                self.sounds.push("start");
             }
             Phase::Over => {}
         }
@@ -307,6 +350,7 @@ impl Game {
         self.over_step = self.steps;
         self.banner = None;
         self.presses.clear();
+        self.sounds.push("over");
         if self.field.score > self.best {
             self.best = self.field.score;
             self.new_best = true;
@@ -408,6 +452,10 @@ impl Game {
             let (x, y) = layout.to_canvas(field.ball.pos);
             fill_disc(canvas, (x, y), BALL_RADIUS, shade(WHITE, -0.15));
             canvas.fill_rect(Rect::new(x as i32 - 2, y as i32 - 2, 2, 2), WHITE);
+        }
+        if !self.sound_on {
+            // Below the left inlane, a corner the ball never reaches.
+            label(canvas, "SOUND OFF", (table.x + 4, table.y + 468), DIM, 1);
         }
     }
 

@@ -3,19 +3,22 @@
 //!
 //! Left/A/Z and right/D/M (or /) work the flippers, as do the left and
 //! right mouse buttons; hold space or down to pull the plunger and let go to
-//! launch; enter starts, p pauses, esc quits on the desktop. On a touch
-//! screen hold the left or right half of the screen for that flipper and
-//! hold the LAUNCH button to pull the plunger. A window (or phone) taller
-//! than wide gets the portrait layout; `--portrait` opens one. The game runs
-//! at 60 steps per second whatever the screen's frame rate. The best score
-//! is kept in the browser's local storage, or in the user's data folder on
-//! desktop.
+//! launch; enter starts, p pauses, s turns the sound on or off, esc quits
+//! on the desktop. On a touch screen hold the left or right half of the
+//! screen for that flipper and hold the LAUNCH button to pull the plunger. A
+//! window (or phone) taller than wide gets the portrait layout; `--portrait`
+//! opens one. The game runs at 60 steps per second whatever the screen's
+//! frame rate. The best score is kept in the browser's local storage, or in
+//! the user's data folder on desktop. Sound effects are made in code
+//! (`sounds`).
 
 mod game;
+mod sounds;
 
 use bevy::prelude::*;
 use game::{Event, Game, Key, Layout, Outcome, STORAGE_KEY};
 use pinball_core::Held;
+use sandbox_ui::audio::Audio;
 use sandbox_ui::{Orientation, PixelCanvas, Pointers, SandboxPlugin};
 
 /// The desktop window is this many times the canvas size (as a fraction).
@@ -53,6 +56,7 @@ fn key_for(code: KeyCode) -> Option<Key> {
     match code {
         KeyCode::Enter | KeyCode::NumpadEnter => Some(Key::Start),
         KeyCode::KeyP => Some(Key::Pause),
+        KeyCode::KeyS => Some(Key::Sound),
         KeyCode::Escape => Some(Key::Escape),
         _ => None,
     }
@@ -78,13 +82,17 @@ fn main() {
             canvas_size: (width, height),
             scanlines: true,
         })
+        .add_plugins(sandbox_ui::audio::plugin)
+        .insert_resource(Audio::new(sounds::sounds()))
         .insert_resource(pinball)
         .add_systems(Update, play)
         .run();
 }
 
+#[allow(clippy::too_many_arguments)]
 fn play(
     mut pinball: ResMut<Pinball>,
+    mut audio: ResMut<Audio>,
     mut pixel: ResMut<PixelCanvas>,
     mut exit: MessageWriter<AppExit>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -131,6 +139,10 @@ fn play(
     for _ in 0..sandbox_ui::clock::steps_due(carry, time.delta_secs()) {
         outcomes.push(game.step(held));
     }
+    audio.muted = !game.sound_on;
+    for name in game.take_sounds() {
+        audio.play(name);
+    }
     for outcome in outcomes {
         match outcome {
             Outcome::Continue => {}
@@ -161,6 +173,7 @@ mod tests {
         assert_eq!(key_for(KeyCode::Slash), Some(Key::Right));
         assert_eq!(key_for(KeyCode::Space), Some(Key::Plunger));
         assert_eq!(key_for(KeyCode::Enter), Some(Key::Start));
+        assert_eq!(key_for(KeyCode::KeyS), Some(Key::Sound));
         assert_eq!(key_for(KeyCode::KeyQ), None);
     }
 }
