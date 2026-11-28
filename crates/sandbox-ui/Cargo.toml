@@ -20,13 +20,9 @@ web-sys = { version = "0.3", features = [
     "Element",
     "HtmlCanvasElement",
     "ImageData",
-    "Location",
     "Storage",
     "Window",
 ] }
 
 [lints]
 workspace = true
-
-[dev-dependencies]
-touch.workspace = true

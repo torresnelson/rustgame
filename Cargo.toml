@@ -51,6 +51,6 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 # Only debug info: wasm-bindgen needs the target_features section that a full
-# strip removes; tools/build_rust_web.py strips the rest with wasm-opt.
+# strip removes; `cargo xtask build-web` strips the rest with wasm-opt.
 strip = "debuginfo"
 panic = "abort"

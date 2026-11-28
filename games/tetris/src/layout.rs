@@ -145,27 +145,18 @@ pub const KEY_GAP: i32 = 4;
 pub const KEYBOARD_X: i32 = 12;
 pub const KEYBOARD_Y: i32 = 190;
 
-/// One action per character, so a key's action is its character.
-const KEY_CHARS: [&str; 36] = [
-    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S",
-    "T", "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-];
-
 /// On-screen keys (view pixels): one per character, then wide DEL and OK keys
-/// on the last row.
+/// on the last row. A key's action and label are its character.
 pub fn keyboard() -> Vec<Button> {
     let mut keys = Vec::new();
-    let mut chars = KEY_CHARS.iter();
     let mut y = KEYBOARD_Y;
-    for (r, row) in KEY_ROWS.iter().enumerate() {
+    for (r, &row) in KEY_ROWS.iter().enumerate() {
         y = KEYBOARD_Y + r as i32 * (KEY_H + KEY_GAP);
-        for c in 0..row.len() as i32 {
-            let char = chars.next().expect("one action per key");
-            keys.push(Button::new(
-                char,
-                char,
-                Rect::new(KEYBOARD_X + c * (KEY_W + KEY_GAP), y, KEY_W, KEY_H),
-            ));
+        for c in 0..row.len() {
+            // The rows are ASCII, so every byte is one character.
+            let char = &row[c..=c];
+            let x = KEYBOARD_X + c as i32 * (KEY_W + KEY_GAP);
+            keys.push(Button::new(char, char, Rect::new(x, y, KEY_W, KEY_H)));
         }
     }
     let wide = 2 * KEY_W + KEY_GAP;

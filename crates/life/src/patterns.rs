@@ -1,7 +1,7 @@
 //! Catalogue of well-known patterns, written as plaintext grids:
 //! `O` is a live cell, `.` is dead (port of `patterns.py`).
 
-use crate::{Cell, Cells};
+use crate::Cells;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Pattern {
@@ -60,7 +60,7 @@ pub fn random_soup(rows: i32, columns: i32, density: f64, rng: &mut fastrand::Rn
     for r in 0..rows {
         for c in 0..columns {
             if rng.f64() < density {
-                cells.insert((r, c) as Cell);
+                cells.insert((r, c));
             }
         }
     }
