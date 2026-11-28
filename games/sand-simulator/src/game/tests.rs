@@ -92,6 +92,20 @@ fn resize_brush_is_clamped() {
 }
 
 #[test]
+fn small_pixel_scrolls_add_up_to_brush_steps() {
+    let mut carry = 0.0;
+    let steps: Vec<i32> = [15.0, 15.0, 15.0, 15.0]
+        .iter()
+        .map(|&pixels| pixel_wheel_steps(&mut carry, pixels))
+        .collect();
+    assert_eq!(steps, [0, 0, 1, 0]);
+    assert_eq!(carry, 20.0);
+    assert_eq!(pixel_wheel_steps(&mut carry, -100.0), -2);
+    assert_eq!(carry, 0.0);
+    assert_eq!(pixel_wheel_steps(&mut carry, 100.0), 2);
+}
+
+#[test]
 fn every_tool_can_paint() {
     for (action, tool) in TOOLS {
         assert_eq!(tool_for(action), Some(tool));

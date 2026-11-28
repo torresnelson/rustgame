@@ -159,6 +159,19 @@ pub fn status_text(tool: Material, brush: i32, fps: f32, paused: bool) -> String
     )
 }
 
+/// Wheel pixels (touchpads, some browsers) per brush step.
+pub const WHEEL_STEP_PIXELS: f32 = 40.0;
+
+/// Whole brush steps in a pixel scroll of `pixels`, plus the `carry` left
+/// over from earlier scrolls; the remainder is carried on, so the many small
+/// scrolls of a touchpad still add up.
+pub fn pixel_wheel_steps(carry: &mut f32, pixels: f32) -> i32 {
+    *carry += pixels;
+    let steps = (*carry / WHEEL_STEP_PIXELS).trunc();
+    *carry -= steps * WHEEL_STEP_PIXELS;
+    steps as i32
+}
+
 pub fn resize_brush(brush: i32, action: &str) -> i32 {
     let delta = match action {
         "smaller" => -1,
@@ -253,10 +266,11 @@ impl Game {
                     }
                     Event::Press(_) => None,
                 };
+                if let Some(tool) = action.and_then(tool_for) {
+                    sandbox.tool = tool;
+                    return;
+                }
                 match action {
-                    Some(action) if tool_for(action).is_some() => {
-                        sandbox.tool = tool_for(action).expect("checked")
-                    }
                     Some(action @ ("smaller" | "bigger")) => {
                         sandbox.brush = resize_brush(sandbox.brush, action)
                     }
