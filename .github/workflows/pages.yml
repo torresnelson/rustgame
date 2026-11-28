@@ -2,7 +2,8 @@ name: Pages
 
 # Build the browser versions of the games and publish them to GitHub Pages:
 # a landing page at / and one folder per game (/gameoflife/, /tetris/,
-# /sandsimulator/, /pong/, /snake/, /minesweeper/, /merge/, /bricks/).
+# /sandsimulator/, /pong/, /snake/, /minesweeper/, /merge/, /bricks/,
+# /pinball/).
 
 # It runs after CI passes on master, so a commit that fails format, lint or
 # tests is never published; it can also be started by hand.

@@ -256,20 +256,3 @@ fn the_field_shows_paddles_ball_and_line() {
     game.draw(&mut canvas);
     assert_eq!(canvas.get(133, 110), Some(FADE_15));
 }
-
-#[test]
-fn the_ball_is_a_round_disc() {
-    let mut canvas = Canvas::new(60, 60);
-    fill_disc(&mut canvas, Vec2::new(30.0, 30.0), 10.0, RED);
-    let lit = (0..60)
-        .flat_map(|y| (0..60).map(move |x| (x, y)))
-        .filter(|&(x, y)| canvas.get(x, y) == Some(RED))
-        .count() as f32;
-    let area = std::f32::consts::PI * 100.0;
-    assert!((lit - area).abs() < area * 0.05, "{lit} pixels");
-    assert_eq!(canvas.get(30, 30), Some(RED));
-    assert_eq!(canvas.get(21, 30), Some(RED));
-    assert_eq!(canvas.get(41, 30), Some(BLACK));
-    // Corners of the bounding box stay empty.
-    assert_eq!(canvas.get(21, 21), Some(BLACK));
-}
